@@ -18,6 +18,7 @@ program = SimpleMOC-kernel
 
 source = \
 main.c \
+kernel.c \
 init.c \
 io.c \
 solver.c \
