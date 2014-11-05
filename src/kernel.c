@@ -12,17 +12,16 @@ void run_kernel( Input * I, Params * P)
 	for( long i = 0; i < I.n_segments; i++ )
 	{
 		// Pick Random QSR
-		int QSR_id = rand_r(seed);
+		int QSR_id = rand_r(seed) % I->n_source_regions;
 
 		// Attenuate Segment
-		attenuate_segment( I, P, QSR_id, local_vectors);
+		attenuate_segment( I, P, QSR_id, state_flux, local_vectors);
 	}
 
 }
 
-void attenuate_fluxes( Track * track, Source * QSR, Input * I_in, 
-		Params * params_in, float ds, float mu, float az_weight, 
-		AttenuateVars * A ) 
+void attenuate_fluxes( Input * I, Params * P, float * state_flux,
+		int QSR_id, Vectors * vectors) 
 {
 	Input I = *I_in;
 	Params params = *params_in;
