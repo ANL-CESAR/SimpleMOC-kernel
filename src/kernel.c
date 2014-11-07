@@ -1,6 +1,6 @@
 #include<SimpleMOC-kernel_header.h>
 
-void run_kernel( Input * I, Params * P)
+void run_kernel( Input * I, Source * S, Table * table)
 {
 	// Enter Parallel Region
 	#pragma omp parallel default(none) shared(I, P)
@@ -9,12 +9,22 @@ void run_kernel( Input * I, Params * P)
 		unsigned int seed = time(NULL) * (thread+1);
 
 		// Allocate Thread Local SIMD Vectors
-		SIMD_vectors simd_vectors = allocate_simd_vectors(I);
+		SIMD_vectors simd_vecs = allocate_simd_vectors(I);
 
 		// Allocate Thread Local Flux Vector
 		float * state_flux = (float *) malloc( I->n_egroups * sizeof(float));
 		for( int i = 0; i < I->n_egroups; i++ )
 			state_flux[i] = r_rand(&seed) / RAND_MAX;
+
+		// Initialize PAPI Counters (if enabled)
+		#ifdef PAPI
+		int eventset = PAPI_NULL;
+		int num_papi_events;
+		#pragma omp critical
+		{
+			counter_init(&eventset, &num_papi_events, I);
+		}
+		#endif
 
 		// Enter OMP For Loop over Segments
 		#pragma omp for schedule(dynamic)
@@ -23,52 +33,63 @@ void run_kernel( Input * I, Params * P)
 			// Pick Random QSR
 			int QSR_id = rand_r(&seed) % I->n_source_regions;
 
+			// Pick Random Fine Axial Interval
+			int FAI_id = rand_r(&seed) % I->fine_axial_intervals;
+
 			// Attenuate Segment
-			attenuate_segment( I, P, QSR_id, state_flux, local_vectors);
+			attenuate_segment( I, S, QSR_id, FAI_id, state_flux,
+					&simd_vecs, table);
 		}
+
+		// Stop PAPI Counters
+		#ifdef PAPI
+		if( thread == 0 )
+		{
+			printf("\n");
+			border_print();
+			center_print("PAPI COUNTER RESULTS", 79);
+			border_print();
+			printf("Count          \tSmybol      \tDescription\n");
+		}
+		{
+			#pragma omp barrier
+		}
+		counter_stop(&eventset, num_papi_events, &I);
+		#endif
 	}
 }
 
-void attenuate_segment( Input * I, Params * P, float * state_flux,
-		int QSR_id, Vectors * vectors) 
+void attenuate_segment( Input * restrict I, Source * restrict S,
+		int QSR_id, int FAI_id, float * restrict state_flux,
+		SIMD_vectors * restrict simd_vecs, Table * restrict table) 
 {
-	Input I = *I_in;
-	Params params = *params_in;
+	// Unload local simd vectors
+	float * restrict q0 =            simd_vecs->q0;
+	float * restrict q1 =            simd_vecs->q1;
+	float * restrict q2 =            simd_vecs->q2;
+	float * restrict sigT =          simd_vecs->sigT;
+	float * restrict tau =           simd_vecs->tau;
+	float * restrict sigT2 =         simd_vecs->sigT2;
+	float * restrict expVal =        simd_vecs->expVal;
+	float * restrict reuse =         simd_vecs->reuse;
+	float * restrict flux_integral = simd_vecs->flux_integral;
+	float * restrict tally =         simd_vecs->tally;
+	float * restrict t1 =            simd_vecs->t1;
+	float * restrict t2 =            simd_vecs->t2;
+	float * restrict t3 =            simd_vecs->t3;
+	float * restrict t4 =            simd_vecs->t4;
 
-	// unload attenuate vars
-	float * restrict q0 = A->q0;
-	float *  restrict q1 = A->q1;
-	float *  restrict q2 = A->q2;
-	float *  restrict sigT = A->sigT;
-	float *  restrict tau = A->tau;
-	float *  restrict sigT2 = A->sigT2;
-	float *  restrict expVal = A->expVal;
-	float *  restrict reuse = A->reuse;
-	float *  restrict flux_integral = A->flux_integral;
-	float *  restrict tally = A->tally;
-	float *  restrict t1 = A->t1;
-	float *  restrict t2 = A->t2;
-	float *  restrict t3 = A->t3;
-	float *  restrict t4 = A->t4;
-
-	// compute fine axial interval spacing
-	//float dz = I.height / (I.fai * I.decomp_assemblies_ax * I.cai);
+	// Some placeholder constants - In the full app some of these are
+	// calculated based off position in geometry. This treatment
+	// shaves off a few FLOPS, but is not significant compared to the
+	// rest of the function.
 	float dz = 0.1f;
-
-	// compute z height in cell
-	float zin = 0.2f - dz * 
-		( (int)( 0.3f / dz ) + 0.5f );
-
-	// compute fine axial region ID
-	int fine_id = (int) ( 0.3f / dz ) % 5;
-
-	// compute weight (azimuthal * polar)
-	// NOTE: real app would also have volume weight component
-	float weight = 0.1f * 0.2f;
+	float zin = 0.3f; 
+	float weight = 0.5f;
 	float mu2 = 0.3f;
 
 	// load fine source region flux vector
-	float * FSR_flux = QSR -> fine_flux[fine_id];
+	float * FSR_flux = QSR -> fine_flux[FAI_id];
 
 	if( fine_id == 0 )
 	{
@@ -81,8 +102,8 @@ void attenuate_segment( Input * I, Params * P, float * state_flux,
 		for( int g = 0; g < I.n_egroups; g++)
 		{
 			// load neighboring sources
-			float y2 = QSR->fine_source[fine_id][g];
-			float y3 = QSR->fine_source[fine_id+1][g];
+			float y2 = QSR->fine_source[FAI_id][g];
+			float y3 = QSR->fine_source[FAI_id+1][g];
 
 			// do linear "fitting"
 			float c0 = y2;
@@ -105,8 +126,8 @@ void attenuate_segment( Input * I, Params * P, float * state_flux,
 		for( int g = 0; g < I.n_egroups; g++)
 		{
 			// load neighboring sources
-			float y1 = QSR->fine_source[fine_id-1][g];
-			float y2 = QSR->fine_source[fine_id][g];
+			float y1 = QSR->fine_source[FAI_id-1][g];
+			float y2 = QSR->fine_source[FAI_id][g];
 
 			// do linear "fitting"
 			float c0 = y2;
@@ -129,9 +150,9 @@ void attenuate_segment( Input * I, Params * P, float * state_flux,
 		for( int g = 0; g < I.n_egroups; g++)
 		{
 			// load neighboring sources
-			float y1 = QSR->fine_source[fine_id-1][g];
-			float y2 = QSR->fine_source[fine_id][g];
-			float y3 = QSR->fine_source[fine_id+1][g];
+			float y1 = QSR->fine_source[FAI_id-1][g];
+			float y2 = QSR->fine_source[FAI_id][g];
+			float y3 = QSR->fine_source[FAI_id+1][g];
 
 			// do quadratic "fitting"
 			float c0 = y2;
@@ -169,7 +190,7 @@ void attenuate_segment( Input * I, Params * P, float * state_flux,
 	#pragma simd_level(10)
 	#endif
 	for( int g = 0; g < I.n_egroups; g++)
-		expVal[g] = interpolateTable( params.expTable, tau[g] );  
+		expVal[g] = interpolateTable( table, tau[g] );  
 
 	// Flux Integral
 
@@ -194,7 +215,7 @@ void attenuate_segment( Input * I, Params * P, float * state_flux,
 	for( int g = 0; g < I.n_egroups; g++)
 	{
 		// add contribution to new source flux
-		flux_integral[g] = (q0[g] * tau[g] + (sigT[g] * track->psi[g] - q0[g])
+		flux_integral[g] = (q0[g] * tau[g] + (sigT[g] * state_flux[g] - q0[g])
 				* expVal[g]) / sigT2[g] + q1[g] * mu * reuse[g] + q2[g] * mu2 
 			* (tau[g] * (tau[g] * (tau[g] - 3.f) + 6.f) - 6.f * expVal[g]) 
 			/ (3.f * sigT2[g] * sigT2[g]);
@@ -212,7 +233,7 @@ void attenuate_segment( Input * I, Params * P, float * state_flux,
 	}
 
 	#ifdef OPENMP
-	omp_set_lock(QSR->locks + fine_id);
+	omp_set_lock(QSR->locks + FAI_id);
 	#endif
 
 	#ifdef INTEL
@@ -226,7 +247,7 @@ void attenuate_segment( Input * I, Params * P, float * state_flux,
 	}
 
 	#ifdef OPENMP
-	omp_unset_lock(QSR->locks + fine_id);
+	omp_unset_lock(QSR->locks + FAI_id);
 	#endif
 
 	// Term 1
@@ -267,7 +288,7 @@ void attenuate_segment( Input * I, Params * P, float * state_flux,
 	#endif
 	for( int g = 0; g < I.n_egroups; g++)
 	{
-		t4[g] = track->psi[g] * (1.f - expVal[g]);
+		t4[g] = state_flux[g] * (1.f - expVal[g]);
 	}
 	// Total psi
 	#ifdef INTEL
@@ -277,7 +298,7 @@ void attenuate_segment( Input * I, Params * P, float * state_flux,
 	#endif
 	for( int g = 0; g < I.n_egroups; g++)
 	{
-		track->psi[g] = t1[g] + t2[g] + t3[g] + t4[g];
+		state_flux[g] = t1[g] + t2[g] + t3[g] + t4[g];
 	}
 }	
 
