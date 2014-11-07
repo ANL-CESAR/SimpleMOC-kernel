@@ -296,35 +296,6 @@ void transport_sweep( Params params, Input I )
 		}
 		#endif
 
-		AttenuateVars A;
-		float * ptr = (float * ) malloc( I.n_egroups * 14 * sizeof(float));
-		A.q0 = ptr;
-		ptr += I.n_egroups;
-		A.q1 = ptr;
-		ptr += I.n_egroups;
-		A.q2 = ptr;
-		ptr += I.n_egroups;
-		A.sigT = ptr;
-		ptr += I.n_egroups;
-		A.tau = ptr;
-		ptr += I.n_egroups;
-		A.sigT2 = ptr;
-		ptr += I.n_egroups;
-		A.expVal = ptr;
-		ptr += I.n_egroups;
-		A.reuse = ptr;
-		ptr += I.n_egroups;
-		A.flux_integral = ptr;
-		ptr += I.n_egroups;
-		A.tally = ptr;
-		ptr += I.n_egroups;
-		A.t1 = ptr;
-		ptr += I.n_egroups;
-		A.t2 = ptr;
-		ptr += I.n_egroups;
-		A.t3 = ptr;
-		ptr += I.n_egroups;
-		A.t4 = ptr;
 
 		#pragma omp for schedule( dynamic ) 
 		for (long i = 0; i < I.ntracks_2D; i++)

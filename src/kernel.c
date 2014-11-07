@@ -3,24 +3,33 @@
 void run_kernel( Input * I, Params * P)
 {
 	// Enter Parallel Region
-	
-	// Create Thread Local Random Seed
-	
-	// Allocate Thread Local SIMD Vectors
-	
-	// Enter OMP For Loop over Segments
-	for( long i = 0; i < I.n_segments; i++ )
+	#pragma omp parallel default(none) shared(I, P)
 	{
-		// Pick Random QSR
-		int QSR_id = rand_r(seed) % I->n_source_regions;
+		// Create Thread Local Random Seed
+		unsigned int seed = time(NULL) * (thread+1);
 
-		// Attenuate Segment
-		attenuate_segment( I, P, QSR_id, state_flux, local_vectors);
+		// Allocate Thread Local SIMD Vectors
+		SIMD_vectors simd_vectors = allocate_simd_vectors(I);
+
+		// Allocate Thread Local Flux Vector
+		float * state_flux = (float *) malloc( I->n_egroups * sizeof(float));
+		for( int i = 0; i < I->n_egroups; i++ )
+			state_flux[i] = r_rand(&seed) / RAND_MAX;
+
+		// Enter OMP For Loop over Segments
+		#pragma omp for schedule(dynamic)
+		for( long i = 0; i < I.n_segments; i++ )
+		{
+			// Pick Random QSR
+			int QSR_id = rand_r(&seed) % I->n_source_regions;
+
+			// Attenuate Segment
+			attenuate_segment( I, P, QSR_id, state_flux, local_vectors);
+		}
 	}
-
 }
 
-void attenuate_fluxes( Input * I, Params * P, float * state_flux,
+void attenuate_segment( Input * I, Params * P, float * state_flux,
 		int QSR_id, Vectors * vectors) 
 {
 	Input I = *I_in;
@@ -186,7 +195,7 @@ void attenuate_fluxes( Input * I, Params * P, float * state_flux,
 	{
 		// add contribution to new source flux
 		flux_integral[g] = (q0[g] * tau[g] + (sigT[g] * track->psi[g] - q0[g])
-			* expVal[g]) / sigT2[g] + q1[g] * mu * reuse[g] + q2[g] * mu2 
+				* expVal[g]) / sigT2[g] + q1[g] * mu * reuse[g] + q2[g] * mu2 
 			* (tau[g] * (tau[g] * (tau[g] - 3.f) + 6.f) - 6.f * expVal[g]) 
 			/ (3.f * sigT2[g] * sigT2[g]);
 	}

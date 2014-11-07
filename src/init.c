@@ -1,5 +1,11 @@
 #include"SimpleMOC_header.h"
 
+Source * initialize_sources( Input * I )
+{
+	// Allocate Space for Source Array
+	Source * sources = (Source *) malloc(); 
+}
+
 // Builds a table of exponential values for linear interpolation
 Table buildExponentialTable( float precision, float maxVal )
 {
@@ -38,9 +44,11 @@ Input set_default_input( void )
 {
 	Input I;
 
-	I.source_regionsi_2D = 2250;
+	I.source_regions = 2250;
 
 	I.course_axial_intervals = 9;
+
+	I.fine_axial_intervals = 5;
 	
 	I.segments = 10000000;
 	
@@ -57,6 +65,41 @@ Input set_default_input( void )
 	return I;
 }
 
+SIMD_Vectors allocate_simd_vectors(Input * I)
+{
+	SIMD_Vectors A;
+	float * ptr = (float * ) malloc( I->n_egroups * 14 * sizeof(float));
+	A.q0 = ptr;
+	ptr += I.n_egroups;
+	A.q1 = ptr;
+	ptr += I.n_egroups;
+	A.q2 = ptr;
+	ptr += I.n_egroups;
+	A.sigT = ptr;
+	ptr += I.n_egroups;
+	A.tau = ptr;
+	ptr += I.n_egroups;
+	A.sigT2 = ptr;
+	ptr += I.n_egroups;
+	A.expVal = ptr;
+	ptr += I.n_egroups;
+	A.reuse = ptr;
+	ptr += I.n_egroups;
+	A.flux_integral = ptr;
+	ptr += I.n_egroups;
+	A.tally = ptr;
+	ptr += I.n_egroups;
+	A.t1 = ptr;
+	ptr += I.n_egroups;
+	A.t2 = ptr;
+	ptr += I.n_egroups;
+	A.t3 = ptr;
+	ptr += I.n_egroups;
+	A.t4 = ptr;
+	
+	return A;
+}
+
 #ifdef OPENMP
 // Intialized OpenMP Source Region Locks
 omp_lock_t * init_locks( Input I )
@@ -64,7 +107,7 @@ omp_lock_t * init_locks( Input I )
 	// Allocate locks array
 	long n_locks = I.n_source_regions_per_node * I.cai; 
 	omp_lock_t * locks = (omp_lock_t *) malloc( n_locks* sizeof(omp_lock_t));
-	
+
 	// Initialize locks array
 	for( long i = 0; i < n_locks; i++ )
 		omp_init_lock(&locks[i]);
@@ -72,3 +115,5 @@ omp_lock_t * init_locks( Input I )
 	return locks;
 }	
 #endif
+
+
