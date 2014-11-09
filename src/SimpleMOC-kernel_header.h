@@ -27,10 +27,7 @@ typedef struct{
 	int fine_axial_intervals;
 	long segments;
 	int egroups;
-
-	#ifdef OPENMP
 	int nthreads;
-	#endif
 
     #ifdef PAPI
 	int papi_event_set;

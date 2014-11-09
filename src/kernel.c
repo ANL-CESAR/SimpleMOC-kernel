@@ -319,7 +319,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 
 /* Interpolates a formed exponential table to compute ( 1- exp(-x) )
  *  at the desired x value */
-float interpolateTable( Table * table, float x)
+float interpolateTable( Table * restrict table, float x)
 {
 	// check to ensure value is in domain
 	if( x > table->maxVal )

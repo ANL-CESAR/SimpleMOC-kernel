@@ -41,8 +41,9 @@ int main( int argc, char * argv[] )
 	center_print("RESULTS SUMMARY", 79);
 	border_print();
 
+	double tpi = ((double) (stop - start) / (double)I->segments) * 1.0e9;
 	printf("Time per Intersection:          ");
-	printf("%.2lf ns\n", 0.5);
+	printf("%.2lf ns\n", tpi);
 	border_print();
 
 	return 0;
