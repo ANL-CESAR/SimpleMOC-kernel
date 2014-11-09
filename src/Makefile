@@ -21,7 +21,6 @@ main.c \
 kernel.c \
 init.c \
 io.c \
-solver.c \
 papi.c
 
 obj = $(source:.c=.o)

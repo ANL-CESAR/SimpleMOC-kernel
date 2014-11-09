@@ -1,4 +1,4 @@
-#include<SimpleMOC-kernel_header.h>
+#include "SimpleMOC-kernel_header.h"
 
 void run_kernel( Input * I, Source * S, Table * table)
 {
