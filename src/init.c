@@ -8,7 +8,7 @@ Input * set_default_input( void )
 	I->source_regions = 2250;
 	I->course_axial_intervals = 9;
 	I->fine_axial_intervals = 5;
-	I->segments = 5000000;
+	I->segments = 20000000;
 	I->egroups = 100;
 
 	#ifdef PAPI
