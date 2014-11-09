@@ -3,16 +3,15 @@
 int main( int argc, char * argv[] )
 {
 	int version = 0;
-	int mype = 0;
 
 	#ifdef PAPI
 	papi_serial_init();
 	#endif
 
-	srand(time(NULL) * (mype+1));
+	srand(time(NULL));
 
-	Input input = set_default_input();
-	read_CLI( argc, argv, &input );
+	Input * I = set_default_input();
+	read_CLI( argc, argv, I );
 
 	logo(version);
 
@@ -22,16 +21,20 @@ int main( int argc, char * argv[] )
 
 	print_input_summary(input);
 
+	// Build Source Data
+	Source * sources = initialize_sources(I); 
+	
+	// Build Exponential Table
+	Table * table = buildExponentialTable( 0.01, 10.0 );
+
 	center_print("SIMULATION", 79);
 	border_print();
 
 	double start, stop;
 
+	// Run Simulation Kernel Loop
 	start = get_time();
-	for( int i = 0; i < num_iters; i++)
-	{
-
-	}
+	run_kernel(I, S, table);
 	stop = get_time();
 
 	border_print();
@@ -40,8 +43,6 @@ int main( int argc, char * argv[] )
 
 	long tracks_per_second = input.ntracks/time_transport;
 
-	printf("Total Tracks per Second:        ");
-	fancy_int( tracks_per_second );
 	printf("Time per Intersection:          ");
 	printf("%.2lf ns\n", time_per_intersection( input, time_transport ));
 	border_print();
