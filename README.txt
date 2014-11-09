@@ -79,7 +79,16 @@ Running SimpleMOC-kernel-------------------------------------------------------
 
 	Usage: ./SimpleMOC-kernel <options>
 	Options include:
-	  -t <threads>     Number of OpenMP threads to run
+	  -t <threads>        Number of OpenMP threads to run
+	  -s <segments>       Number of segments to process
+	  -e <energy groups>  Number of energy groups
+	  -p <PAPI event>     PAPI event name to count (1 only)
+
+	If not options are specified, then a default set of parameters will
+	automatically be run. These parameters reflect the approximate per node
+	work load for a full core reactor simulation (the the number of geometry
+	segments has been signficantly reduced to reduce runtime while preserving
+	the computational profile).
 
 ==============================================================================
 Advanced Compilation, Debugging, Optimization, and Profiling
@@ -124,12 +133,5 @@ For the purposes of simplicity this mini-app uses a conservative "strawman"
 reactor model to represent a good target problem for full core reactor
 simualations to be run on exascale class supercomputers. Arbitrary
 user-defined geometries are not supported.
-
-===============================================================================
-Input Variables
-===============================================================================
-
-By default, the program will run with a general set of inputs
-so that approximately 4GB of memory is used on a node.
 
 ===============================================================================
