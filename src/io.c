@@ -5,17 +5,14 @@ void logo(int version)
 {
 	border_print();
 	printf(
-"              _____ _                 _      __  __  ____   _____ \n"
-"             / ____(_)               | |    |  \\/  |/ __ \\ / ____|\n"
-"            | (___  _ _ __ ___  _ __ | | ___| \\  / | |  | | |     \n"
-"             \\___ \\| | '_ ` _ \\| '_ \\| |/ _ \\ |\\/| | |  | | |     \n"
-"             ____) | | | | | | | |_) | |  __/ |  | | |__| | |____ \n"
-"            |_____/|_|_| |_| |_| .__/|_|\\___|_|  |_|\\____/ \\_____|\n"
-"                               | |                                \n"
-"                               |_|                                \n"
+"   __           __        ___        __   __           ___  __        ___     \n"
+"  /__` |  |\\/| |__) |    |__   |\\/| /  \\ /  ` __ |__/ |__  |__) |\\ | |__  |   \n"
+"  .__/ |  |  | |    |___ |___  |  | \\__/ \\__,    |  \\ |___ |  \\ | \\| |___ |___\n" 
 	);
+	printf("\n");
 	border_print();
 	printf("\n");
+
 	center_print("Developed at", 79);
 	center_print("The Massachusetts Institute of Technology", 79);
 	center_print("and", 79);
@@ -82,7 +79,7 @@ void print_input_summary(Input * I)
 	printf("%-25s%d\n", "Source Regions:", I->source_regions);
 	printf("%-25s%d\n", "Course Axial Intervals:", I->course_axial_intervals);
 	printf("%-25s%d\n", "Fine Axial Intervals:", I->fine_axial_intervals);
-	printf("%-25s%ld\n", "Segments:", I->segments);
+	printf("%-25s", "Segments:"); fancy_int(I->segments);
 	#ifdef PAPI
     if( I->papi_event_set == -1)
         printf("%-25s%s\n", "PAPI event to count:", I->event_name);
@@ -120,6 +117,24 @@ void read_CLI( int argc, char * argv[], Input * input )
 				print_CLI_error();
 		}
 
+		// segments (-s)
+		if( strcmp(arg, "-s") == 0 )
+		{
+			if( ++i < argc )
+				input->segments = atoi(argv[i]);
+			else
+				print_CLI_error();
+		}
+		
+		// egroups (-e)
+		if( strcmp(arg, "-e") == 0 )
+		{
+			if( ++i < argc )
+				input->egroups = atoi(argv[i]);
+			else
+				print_CLI_error();
+		}
+
         #ifdef PAPI
         // Add single PAPI event
         else if( strcmp(arg, "-p") == 0 )
@@ -148,10 +163,10 @@ void print_CLI_error(void)
 {
 	printf("Usage: ./SimpleMOC <options>\n");
 	printf("Options include:\n");
-	printf("  -t <threads>     Number of OpenMP threads to run\n");
-	printf("  -i <filename>    Input file name\n");
-    printf("  -p <PAPI event>  PAPI event name to count (1 only) \n");
-    printf("  -s               Small problem flag \n");
+	printf("  -t <threads>        Number of OpenMP threads to run\n");
+	printf("  -s <segments>       Number of segments to process\n");
+	printf("  -e <energy groups>  Number of energy groups\n");
+    printf("  -p <PAPI event>     PAPI event name to count (1 only) \n");
 	printf("See readme for full description of default run values\n");
 	exit(1);
 }
