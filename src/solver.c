@@ -1,4 +1,4 @@
-#include"SimpleMOC_header.h"
+#include<SimpleMOC-kernel_header.h>
 
 /* Efficient version of attenuate fluxes which determines the change in angular
  * flux along a particular track across a fine axial region and tallies the 

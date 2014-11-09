@@ -1,4 +1,4 @@
-#include "SimpleMOC_header.h"
+#include<SimpleMOC-kernel_header.h>
 
 // Prints program logo
 void logo(int version)
