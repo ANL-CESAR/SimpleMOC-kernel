@@ -1,5 +1,28 @@
 #include "SimpleMOC-kernel_header.h"
 
+// Gets I from user and sets defaults
+Input * set_default_input( void )
+{
+	Input * I = (Input *) malloc(sizeof(Input));
+
+	I->source_regions = 2250;
+	I->course_axial_intervals = 9;
+	I->fine_axial_intervals = 5;
+	I->segments = 5000000;
+	I->egroups = 100;
+
+	#ifdef PAPI
+	I->papi_event_set = 0;
+	#endif
+
+	#ifdef OPENMP
+	I->nthreads = omp_get_max_threads();
+	#endif
+
+	return I;
+}
+
+
 Source * initialize_sources( Input * I )
 {
 	size_t nbytes = 0;
@@ -84,27 +107,6 @@ Table * buildExponentialTable( float precision, float maxVal )
 	return table;
 }
 
-// Gets I from user and sets defaults
-Input * set_default_input( void )
-{
-	Input * I = (Input *) malloc(sizeof(Input));
-
-	I->source_regions = 2250;
-	I->course_axial_intervals = 9;
-	I->fine_axial_intervals = 5;
-	I->segments = 50000000;
-	I->egroups = 100;
-
-	#ifdef PAPI
-	I->papi_event_set = 0;
-	#endif
-
-	#ifdef OPENMP
-	I->nthreads = omp_get_max_threads();
-	#endif
-
-	return I;
-}
 
 SIMD_Vectors allocate_simd_vectors(Input * I)
 {

@@ -29,6 +29,7 @@ int main( int argc, char * argv[] )
 
 	center_print("SIMULATION", 79);
 	border_print();
+	printf("Attentuating fluxes across segments...\n");
 
 	double start, stop;
 
@@ -37,13 +38,16 @@ int main( int argc, char * argv[] )
 	run_kernel(I, S, table);
 	stop = get_time();
 
+	printf("Simulation Complete.\n");
+
 	border_print();
 	center_print("RESULTS SUMMARY", 79);
 	border_print();
 
 	double tpi = ((double) (stop - start) / (double)I->segments) * 1.0e9;
-	printf("Time per Intersection:          ");
-	printf("%.2lf ns\n", tpi);
+	printf("%-25s%.3lf seconds\n", "Runtime:", stop-start);
+	printf("%-25s%ld\n", "Intersections:", I->segments);
+	printf("%-25s%.3lf ns\n", "Time per Intersection:", tpi);
 	border_print();
 
 	return 0;
