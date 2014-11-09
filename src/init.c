@@ -78,7 +78,7 @@ Table * buildExponentialTable( float precision, float maxVal )
 	// assign data to table
 	table->dx = dx;
 	table->values = tableVals;
-	table->maxVal = maxVal - table.dx;
+	table->maxVal = maxVal - table->dx;
 	table->N = N;
 
 	return table;
@@ -109,33 +109,33 @@ Input * set_default_input( void )
 SIMD_Vectors allocate_simd_vectors(Input * I)
 {
 	SIMD_Vectors A;
-	float * ptr = (float * ) malloc( I->n_egroups * 14 * sizeof(float));
+	float * ptr = (float * ) malloc( I->egroups * 14 * sizeof(float));
 	A.q0 = ptr;
-	ptr += I.n_egroups;
+	ptr += I->egroups;
 	A.q1 = ptr;
-	ptr += I.n_egroups;
+	ptr += I->egroups;
 	A.q2 = ptr;
-	ptr += I.n_egroups;
+	ptr += I->egroups;
 	A.sigT = ptr;
-	ptr += I.n_egroups;
+	ptr += I->egroups;
 	A.tau = ptr;
-	ptr += I.n_egroups;
+	ptr += I->egroups;
 	A.sigT2 = ptr;
-	ptr += I.n_egroups;
+	ptr += I->egroups;
 	A.expVal = ptr;
-	ptr += I.n_egroups;
+	ptr += I->egroups;
 	A.reuse = ptr;
-	ptr += I.n_egroups;
+	ptr += I->egroups;
 	A.flux_integral = ptr;
-	ptr += I.n_egroups;
+	ptr += I->egroups;
 	A.tally = ptr;
-	ptr += I.n_egroups;
+	ptr += I->egroups;
 	A.t1 = ptr;
-	ptr += I.n_egroups;
+	ptr += I->egroups;
 	A.t2 = ptr;
-	ptr += I.n_egroups;
+	ptr += I->egroups;
 	A.t3 = ptr;
-	ptr += I.n_egroups;
+	ptr += I->egroups;
 	A.t4 = ptr;
 
 	return A;
@@ -157,4 +157,15 @@ omp_lock_t * init_locks( Input * I )
 }	
 #endif
 
+// Timer function. Depends on if compiled with MPI, openmp, or vanilla
+double get_time(void)
+{
+    #ifdef OPENMP
+    return omp_get_wtime();
+    #endif
 
+    time_t time;
+    time = clock();
+
+    return (double) time / (double) CLOCKS_PER_SEC;
+}

@@ -16,13 +16,13 @@ int main( int argc, char * argv[] )
 	logo(version);
 
 	#ifdef OPENMP
-	omp_set_num_threads(input.nthreads); 
+	omp_set_num_threads(I->nthreads); 
 	#endif
 
-	print_input_summary(input);
+	print_input_summary(I);
 
 	// Build Source Data
-	Source * sources = initialize_sources(I); 
+	Source * S = initialize_sources(I); 
 	
 	// Build Exponential Table
 	Table * table = buildExponentialTable( 0.01, 10.0 );
@@ -41,10 +41,8 @@ int main( int argc, char * argv[] )
 	center_print("RESULTS SUMMARY", 79);
 	border_print();
 
-	long tracks_per_second = input.ntracks/time_transport;
-
 	printf("Time per Intersection:          ");
-	printf("%.2lf ns\n", time_per_intersection( input, time_transport ));
+	printf("%.2lf ns\n", 0.5);
 	border_print();
 
 	return 0;

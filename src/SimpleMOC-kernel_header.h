@@ -81,14 +81,15 @@ typedef struct{
 void run_kernel( Input * I, Source * S, Table * table);
 void attenuate_segment( Input * restrict I, Source * restrict S,
 		int QSR_id, int FAI_id, float * restrict state_flux,
-		SIMD_vectors * restrict simd_vecs, Table * restrict table); 
-float interpolateTable( Table table, float x);
+		SIMD_Vectors * restrict simd_vecs, Table * restrict table); 
+float interpolateTable( Table * table, float x);
 
 // init.c
 Source * initialize_sources( Input * I );
 Table * buildExponentialTable( float precision, float maxVal );
 Input * set_default_input( void );
 SIMD_Vectors allocate_simd_vectors(Input * I);
+double get_time(void);
 #ifdef OPENMP
 omp_lock_t * init_locks( Input * I );
 #endif

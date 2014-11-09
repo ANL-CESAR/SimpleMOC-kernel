@@ -5,6 +5,12 @@ void run_kernel( Input * I, Source * S, Table * table)
 	// Enter Parallel Region
 	#pragma omp parallel default(none) shared(I, S, table)
 	{
+		#ifdef OPENMP
+		int thread = omp_get_thread_num();
+		#else
+		int thread = 0;
+		#endif
+
 		// Create Thread Local Random Seed
 		unsigned int seed = time(NULL) * (thread+1);
 
@@ -12,9 +18,9 @@ void run_kernel( Input * I, Source * S, Table * table)
 		SIMD_Vectors simd_vecs = allocate_simd_vectors(I);
 
 		// Allocate Thread Local Flux Vector
-		float * state_flux = (float *) malloc( I->n_egroups * sizeof(float));
-		for( int i = 0; i < I->n_egroups; i++ )
-			state_flux[i] = r_rand(&seed) / RAND_MAX;
+		float * state_flux = (float *) malloc( I->egroups * sizeof(float));
+		for( int i = 0; i < I->egroups; i++ )
+			state_flux[i] = rand_r(&seed) / RAND_MAX;
 
 		// Initialize PAPI Counters (if enabled)
 		#ifdef PAPI
@@ -28,10 +34,10 @@ void run_kernel( Input * I, Source * S, Table * table)
 
 		// Enter OMP For Loop over Segments
 		#pragma omp for schedule(dynamic)
-		for( long i = 0; i < I.n_segments; i++ )
+		for( long i = 0; i < I->segments; i++ )
 		{
 			// Pick Random QSR
-			int QSR_id = rand_r(&seed) % I->n_source_regions;
+			int QSR_id = rand_r(&seed) % I->source_regions;
 
 			// Pick Random Fine Axial Interval
 			int FAI_id = rand_r(&seed) % I->fine_axial_intervals;
@@ -61,7 +67,7 @@ void run_kernel( Input * I, Source * S, Table * table)
 
 void attenuate_segment( Input * restrict I, Source * restrict S,
 		int QSR_id, int FAI_id, float * restrict state_flux,
-		SIMD_vectors * restrict simd_vecs, Table * restrict table) 
+		SIMD_Vectors * restrict simd_vecs, Table * restrict table) 
 {
 	// Unload local simd vectors
 	float * restrict q0 =            simd_vecs->q0;
@@ -86,12 +92,14 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	float dz = 0.1f;
 	float zin = 0.3f; 
 	float weight = 0.5f;
+	float mu = 0.9f;
 	float mu2 = 0.3f;
+	float ds = 0.7f;
 
 	// load fine source region flux vector
 	float * FSR_flux = &S[QSR_id].fine_flux[FAI_id * I->egroups];
 
-	if( fine_id == 0 )
+	if( FAI_id == 0 )
 	{
 		float * f2 = &S[QSR_id].fine_source[FAI_id*I->egroups]; 
 		float * f3 = &S[QSR_id].fine_source[(FAI_id+1)*I->egroups]; 
@@ -101,7 +109,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		#elif defined IBM
 		#pragma simd_level(10)
 		#endif
-		for( int g = 0; g < I.n_egroups; g++)
+		for( int g = 0; g < I->egroups; g++)
 		{
 			// load neighboring sources
 			float y2 = f2[g];
@@ -117,7 +125,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 			q2[g] = 0;
 		}
 	}
-	else if ( fine_id == I.fai - 1 )
+	else if ( FAI_id == I->fine_axial_intervals - 1 )
 	{
 		float * f1 = &S[QSR_id].fine_source[(FAI_id-1)*I->egroups]; 
 		float * f2 = &S[QSR_id].fine_source[FAI_id*I->egroups]; 
@@ -127,7 +135,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		#elif defined IBM
 		#pragma simd_level(10)
 		#endif
-		for( int g = 0; g < I.n_egroups; g++)
+		for( int g = 0; g < I->egroups; g++)
 		{
 			// load neighboring sources
 			float y1 = f1[g];
@@ -154,7 +162,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		#elif defined IBM
 		#pragma simd_level(10)
 		#endif
-		for( int g = 0; g < I.n_egroups; g++)
+		for( int g = 0; g < I->egroups; g++)
 		{
 			// load neighboring sources
 			float y1 = f1[g]; 
@@ -180,7 +188,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#elif defined IBM
 	#pragma simd_level(10)
 	#endif
-	for( int g = 0; g < I.n_egroups; g++)
+	for( int g = 0; g < I->egroups; g++)
 	{
 		// load total cross section
 		sigT[g] = S[QSR_id].sigT[g];
@@ -196,7 +204,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#elif defined IBM
 	#pragma simd_level(10)
 	#endif
-	for( int g = 0; g < I.n_egroups; g++)
+	for( int g = 0; g < I->egroups; g++)
 		expVal[g] = interpolateTable( table, tau[g] );  
 
 	// Flux Integral
@@ -207,7 +215,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#elif defined IBM
 	#pragma simd_level(10)
 	#endif
-	for( int g = 0; g < I.n_egroups; g++)
+	for( int g = 0; g < I->egroups; g++)
 	{
 		reuse[g] = tau[g] * (tau[g] - 2.f) + 2.f * expVal[g] 
 			/ (sigT[g] * sigT2[g]); 
@@ -219,7 +227,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#elif defined IBM
 	#pragma simd_level(10)
 	#endif
-	for( int g = 0; g < I.n_egroups; g++)
+	for( int g = 0; g < I->egroups; g++)
 	{
 		// add contribution to new source flux
 		flux_integral[g] = (q0[g] * tau[g] + (sigT[g] * state_flux[g] - q0[g])
@@ -233,7 +241,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#elif defined IBM
 	#pragma simd_level(10)
 	#endif
-	for( int g = 0; g < I.n_egroups; g++)
+	for( int g = 0; g < I->egroups; g++)
 	{
 		// Prepare tally
 		tally[g] = weight * flux_integral[g];
@@ -248,7 +256,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#elif defined IBM
 	#pragma simd_level(10)
 	#endif
-	for( int g = 0; g < I.n_egroups; g++)
+	for( int g = 0; g < I->egroups; g++)
 	{
 		FSR_flux[g] += tally[g];
 	}
@@ -263,7 +271,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#elif defined IBM
 	#pragma simd_level(10)
 	#endif
-	for( int g = 0; g < I.n_egroups; g++)
+	for( int g = 0; g < I->egroups; g++)
 	{
 		t1[g] = q0[g] * expVal[g] / sigT[g];  
 	}
@@ -273,7 +281,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#elif defined IBM
 	#pragma simd_level(10)
 	#endif
-	for( int g = 0; g < I.n_egroups; g++)
+	for( int g = 0; g < I->egroups; g++)
 	{
 		t2[g] = q1[g] * mu * (tau[g] - expVal[g]) / sigT2[g]; 
 	}
@@ -283,7 +291,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#elif defined IBM
 	#pragma simd_level(10)
 	#endif
-	for( int g = 0; g < I.n_egroups; g++)
+	for( int g = 0; g < I->egroups; g++)
 	{
 		t3[g] =	q2[g] * mu2 * reuse[g];
 	}
@@ -293,7 +301,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#elif defined IBM
 	#pragma simd_level(10)
 	#endif
-	for( int g = 0; g < I.n_egroups; g++)
+	for( int g = 0; g < I->egroups; g++)
 	{
 		t4[g] = state_flux[g] * (1.f - expVal[g]);
 	}
@@ -303,7 +311,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#elif defined IBM
 	#pragma simd_level(10)
 	#endif
-	for( int g = 0; g < I.n_egroups; g++)
+	for( int g = 0; g < I->egroups; g++)
 	{
 		state_flux[g] = t1[g] + t2[g] + t3[g] + t4[g];
 	}
@@ -311,26 +319,26 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 
 /* Interpolates a formed exponential table to compute ( 1- exp(-x) )
  *  at the desired x value */
-float interpolateTable( Table table, float x)
+float interpolateTable( Table * table, float x)
 {
 	// check to ensure value is in domain
-	if( x > table.maxVal )
+	if( x > table->maxVal )
 		return 1.0f;
 	else
 	{
-		int interval = (int) ( x / table.dx + 0.5f * table.dx );
+		int interval = (int) ( x / table->dx + 0.5f * table->dx );
 		/*
-		   if( interval >= table.N || interval < 0)
+		   if( interval >= table->N || interval < 0)
 		   {
 		   printf( "Interval = %d\n", interval);
-		   printf( "N = %d\n", table.N);
+		   printf( "N = %d\n", table->N);
 		   printf( "x = %f\n", x);
-		   printf( "dx = %f\n", table.dx);
+		   printf( "dx = %f\n", table->dx);
 		   exit(1);
 		   }
 		   */
-		float slope = table.values[ 2 * interval ];
-		float intercept = table.values[ 2 * interval + 1 ];
+		float slope = table->values[ 2 * interval ];
+		float intercept = table->values[ 2 * interval + 1 ];
 		float val = slope * x + intercept;
 		return val;
 	}
