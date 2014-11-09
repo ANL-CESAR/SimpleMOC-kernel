@@ -89,10 +89,12 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	float mu2 = 0.3f;
 
 	// load fine source region flux vector
-	float * FSR_flux = QSR -> fine_flux[FAI_id];
+	float * FSR_flux = &S[QSR_id].fine_flux[FAI_id * I->egroups];
 
 	if( fine_id == 0 )
 	{
+		float * f2 = &S[QSR_id].fine_source[FAI_id*I->egroups]; 
+		float * f3 = &S[QSR_id].fine_source[(FAI_id+1)*I->egroups]; 
 		// cycle over energy groups
 		#ifdef INTEL
 		#pragma simd
@@ -102,8 +104,8 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		for( int g = 0; g < I.n_egroups; g++)
 		{
 			// load neighboring sources
-			float y2 = QSR->fine_source[FAI_id][g];
-			float y3 = QSR->fine_source[FAI_id+1][g];
+			float y2 = f2[g];
+			float y3 = f3[g];
 
 			// do linear "fitting"
 			float c0 = y2;
@@ -117,6 +119,8 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	}
 	else if ( fine_id == I.fai - 1 )
 	{
+		float * f1 = &S[QSR_id].fine_source[(FAI_id-1)*I->egroups]; 
+		float * f2 = &S[QSR_id].fine_source[FAI_id*I->egroups]; 
 		// cycle over energy groups
 		#ifdef INTEL
 		#pragma simd
@@ -126,8 +130,8 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		for( int g = 0; g < I.n_egroups; g++)
 		{
 			// load neighboring sources
-			float y1 = QSR->fine_source[FAI_id-1][g];
-			float y2 = QSR->fine_source[FAI_id][g];
+			float y1 = f1[g];
+			float y2 = f2[g];
 
 			// do linear "fitting"
 			float c0 = y2;
@@ -141,6 +145,9 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	}
 	else
 	{
+		float * f1 = &S[QSR_id].fine_source[(FAI_id-1)*I->egroups]; 
+		float * f2 = &S[QSR_id].fine_source[FAI_id*I->egroups]; 
+		float * f3 = &S[QSR_id].fine_source[(FAI_id+1)*I->egroups]; 
 		// cycle over energy groups
 		#ifdef INTEL
 		#pragma simd
@@ -150,9 +157,9 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		for( int g = 0; g < I.n_egroups; g++)
 		{
 			// load neighboring sources
-			float y1 = QSR->fine_source[FAI_id-1][g];
-			float y2 = QSR->fine_source[FAI_id][g];
-			float y3 = QSR->fine_source[FAI_id+1][g];
+			float y1 = f1[g]; 
+			float y2 = f2[g];
+			float y3 = f3[g];
 
 			// do quadratic "fitting"
 			float c0 = y2;
@@ -176,7 +183,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	for( int g = 0; g < I.n_egroups; g++)
 	{
 		// load total cross section
-		sigT[g] = QSR->sigT[g];
+		sigT[g] = S[QSR_id].sigT[g];
 
 		// calculate common values for efficiency
 		tau[g] = sigT[g] * ds;
@@ -233,7 +240,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	}
 
 	#ifdef OPENMP
-	omp_set_lock(QSR->locks + FAI_id);
+	omp_set_lock(S[QSR_id].locks + FAI_id);
 	#endif
 
 	#ifdef INTEL
@@ -247,7 +254,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	}
 
 	#ifdef OPENMP
-	omp_unset_lock(QSR->locks + FAI_id);
+	omp_unset_lock(S[QSR_id].locks + FAI_id);
 	#endif
 
 	// Term 1
