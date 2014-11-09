@@ -86,12 +86,6 @@ void print_input_summary(Input * I)
 	#endif
 	border_print();
 }
-	int source_regions;
-	int course_axial_intervals;
-	int fine_axial_intervals;
-	long segments;
-	int egroups;
-	int nthreads;
 
 // reads command line inputs and applies options
 void read_CLI( int argc, char * argv[], Input * input )
