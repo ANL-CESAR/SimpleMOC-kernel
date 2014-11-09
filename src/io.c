@@ -112,7 +112,7 @@ void read_CLI( int argc, char * argv[], Input * input )
 		}
 
 		// segments (-s)
-		if( strcmp(arg, "-s") == 0 )
+		else if( strcmp(arg, "-s") == 0 )
 		{
 			if( ++i < argc )
 				input->segments = atoi(argv[i]);
@@ -121,7 +121,7 @@ void read_CLI( int argc, char * argv[], Input * input )
 		}
 		
 		// egroups (-e)
-		if( strcmp(arg, "-e") == 0 )
+		else if( strcmp(arg, "-e") == 0 )
 		{
 			if( ++i < argc )
 				input->egroups = atoi(argv[i]);
