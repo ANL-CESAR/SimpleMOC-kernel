@@ -71,46 +71,17 @@ void fancy_int( int a )
 }
 
 // Prints out the summary of User input
-void print_input_summary(Input I)
+void print_input_summary(Input * I)
 {
 	center_print("INPUT SUMMARY", 79);
 	border_print();
-	#ifdef MPI
-	int nranks;
-	MPI_Comm_size(MPI_COMM_WORLD, &nranks);
-	printf("%-35s%d\n", "MPI Ranks:", nranks); 
-	#endif
 	#ifdef OPENMP
-	printf("%-35s%d\n", "Number of Threads:", I.nthreads);
+	printf("%-35s%d\n", "Number of Threads:", I->nthreads);
 	#endif
-	printf("%-35s%d\n", "x-axis assemblies:", I.x_assemblies);
-	printf("%-35s%d\n", "y-axis assemblies:", I.y_assemblies);
-	printf("%-35s%d\n", "coarse axial intervals:", I.cai);
-	printf("%-35s%d\n", "fine axial intervals:", I.fai);
-	printf("%-35s%d\n", "axial source expansion order:", I.axial_exp);
-	printf("%-35s%.2lf\n", "radial ray separation:", I.radial_ray_sep);
-	printf("%-35s%.2lf\n", "axial z-ray separation:", I.axial_z_sep);
-	printf("%-35s%d\n", "azimuthal angles:", I.n_azimuthal);
-	printf("%-35s%d\n", "polar angles:", I.n_polar_angles);
-	printf("%-35s%d\n", "energy groups:", I.n_egroups);
-	if(I.decompose)
-		printf("%-35s%s\n", "data decomposition:", "ON");
-	else
-		printf("%-35s%s\n", "data decomposition:", "OFF");
-	printf("%-35s%d\n", "assemblies per axial sub-domain:", 
-			I.decomp_assemblies_ax);
-	printf("%-35s%ld\n", "avg segments per track:", I.segments_per_track);
-	printf("%-35s%.2lf\n", "assembly width:", I.assembly_width);
-	printf("%-35s%.2lf\n", "reactor height:", I.height);
-	printf("%-35s%ld\n", "2D Src regions per assembly:", 
-			I.n_2D_source_regions_per_assembly);
-	printf("%-35s%ld\n", "2D Tracks:", I.ntracks_2D);
-	printf("%-35s", "3D Tracks:"); fancy_int(I.ntracks);
-	printf("%-35s%zu (MB)\n", "Estimated Memory Usage:",
-			est_mem_usage(I) / 1024 / 1024);
+	printf("%-35s%d\n", "energy groups:", I->egroups);
 	#ifdef PAPI
     if( I.papi_event_set == -1)
-        printf("%-35s%s\n", "PAPI event to count:", I.event_name);
+        printf("%-35s%s\n", "PAPI event to count:", I->event_name);
 	#endif
 	border_print();
 }
@@ -138,17 +109,6 @@ void read_CLI( int argc, char * argv[], Input * input )
 			else
 				print_CLI_error();
 		}
-		// input file (-i)
-		else if( strcmp(arg, "-i") == 0 )
-		{
-			if( ++i < argc )
-				read_input_file( input, argv[i]);
-			else
-				print_CLI_error();
-		}
-		// set input for small problem (-s)
-		else if( strcmp(arg, "-s") == 0)
-			set_small_input( input );
 
         #ifdef PAPI
         // Add single PAPI event
