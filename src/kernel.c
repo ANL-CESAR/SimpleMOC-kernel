@@ -3,13 +3,13 @@
 void run_kernel( Input * I, Source * S, Table * table)
 {
 	// Enter Parallel Region
-	#pragma omp parallel default(none) shared(I, P)
+	#pragma omp parallel default(none) shared(I, S, table)
 	{
 		// Create Thread Local Random Seed
 		unsigned int seed = time(NULL) * (thread+1);
 
 		// Allocate Thread Local SIMD Vectors
-		SIMD_vectors simd_vecs = allocate_simd_vectors(I);
+		SIMD_Vectors simd_vecs = allocate_simd_vectors(I);
 
 		// Allocate Thread Local Flux Vector
 		float * state_flux = (float *) malloc( I->n_egroups * sizeof(float));

@@ -41,8 +41,6 @@ typedef struct{
     #endif
 } Input;
 
-
-
 // Source Region Structure
 typedef struct{
 	float * fine_flux;
