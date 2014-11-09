@@ -84,7 +84,7 @@ void print_input_summary(Input * I)
 	printf("%-35s%d\n", "Fine Axial Intervals:", I->fine_axial_intervals);
 	printf("%-35s%ld\n", "Segments:", I->segments);
 	#ifdef PAPI
-    if( I.papi_event_set == -1)
+    if( I->papi_event_set == -1)
         printf("%-35s%s\n", "PAPI event to count:", I->event_name);
 	#endif
 	border_print();

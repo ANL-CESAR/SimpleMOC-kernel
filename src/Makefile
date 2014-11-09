@@ -3,11 +3,11 @@
 #===============================================================================
 
 COMPILER    = intel
-OPENMP      = no
+OPENMP      = yes
 OPTIMIZE    = yes
 DEBUG       = no
 PROFILE     = no
-PAPI        = no
+PAPI        = yes
 BENCHMARK   = no
 
 #===============================================================================

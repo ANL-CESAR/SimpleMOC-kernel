@@ -33,7 +33,7 @@ void run_kernel( Input * I, Source * S, Table * table)
 		#endif
 
 		// Enter OMP For Loop over Segments
-		#pragma omp for schedule(dynamic)
+		#pragma omp for schedule(static)
 		for( long i = 0; i < I->segments; i++ )
 		{
 			// Pick Random QSR
@@ -60,7 +60,7 @@ void run_kernel( Input * I, Source * S, Table * table)
 		{
 			#pragma omp barrier
 		}
-		counter_stop(&eventset, num_papi_events, &I);
+		counter_stop(&eventset, num_papi_events, I);
 		#endif
 	}
 }
