@@ -31,9 +31,17 @@ Development Leads: John Tramm     <jtramm@mit.edu>
 What is SimpleMOC-kernel?
 ===============================================================================
 
-The purpose of this mini-app is to isolate the key performance kernel
-of the Method of Characteristics (MOC) 3D neutron transport calculations
-in the context of full scale light water reactor simulation.
+SimpleMOC-kernel represents the core computational of a larger application
+(SimpleMOC). This app was written in order to abstract away much of the
+complexity of the full application in order to facilitate easier porting of
+the code and enable more transparent analysis techniques on high performance
+architectures.
+
+The scope of this kernel is essentially the inner-loop of SimpleMOC, i.e., the
+attentuation of neutron fluxes across an individual geometrical segment.
+This kernel captures approximately 90% of the runtime of the full application,
+and is therefore useful for analyzing optimization methods and performance
+implications for exascale supercomputer architectures.
 
 ==============================================================================
 Quick Start Guide
