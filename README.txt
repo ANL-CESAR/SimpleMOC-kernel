@@ -39,7 +39,7 @@ architectures.
 
 The scope of this kernel is essentially the inner-loop of SimpleMOC, i.e., the
 attentuation of neutron fluxes across an individual geometrical segment.
-This kernel captures approximately 90% of the runtime of the full application,
+This kernel composes approximately 92% of the walltime of the full application,
 and is therefore useful for analyzing optimization methods and performance
 implications for exascale supercomputer architectures.
 
