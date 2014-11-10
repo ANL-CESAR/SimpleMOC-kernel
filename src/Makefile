@@ -9,6 +9,7 @@ DEBUG       = no
 PROFILE     = no
 PAPI        = no
 BENCHMARK   = no
+MIC         = no
 
 #===============================================================================
 # Program name & source code list
@@ -65,13 +66,22 @@ ifeq ($(PROFILE),yes)
   CFLAGS += -pg
 endif
 
+# MIC Flags
+ifeq ($(MIC),yes)
+  CFLAGS += -mmic
+endif
+
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
 ifeq ($(COMPILER),gnu)
   CFLAGS += -Ofast -ffast-math -ftree-vectorize -msse2
 endif
 ifeq ($(COMPILER),intel)
+ifeq ($(MIC), yes)
+  CFLAGS += -O3 -ansi-alias -no-prec-div -DINTEL
+else
   CFLAGS += -O3 -xhost -ansi-alias -no-prec-div -DINTEL
+endif
 endif
 ifeq ($(COMPILER),ibm)
   CFLAGS += -O5 -qhot -qsimd=auto -qalias=ansi:allptrs -qarch=qp -DIBM
