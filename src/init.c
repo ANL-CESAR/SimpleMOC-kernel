@@ -22,51 +22,6 @@ Input * set_default_input( void )
 	return I;
 }
 
-Source * aligned_initialize_sources( Input * I )
-{
-	// Source Data Structure Allocation
-	Source * sources = (Source *) _mm_malloc(
-			I->source_regions * sizeof(Source), 64);
-
-	// Allocate Fine Source Data
-	for( int i = 0; i < I->source_regions; i++ )
-		sources[i].fine_source = (float *) _mm_malloc(I->fine_axial_intervals
-				* I->egroups * sizeof(float), 64);
-
-	// Allocate Fine Flux Data
-	for( int i = 0; i < I->source_regions; i++ )
-		sources[i].fine_flux = (float *) _mm_malloc(I->fine_axial_intervals
-				* I->egroups * sizeof(float), 64);
-
-	// Allocate SigT
-	for( int i = 0; i < I->source_regions; i++ )
-		sources[i].sigT = (float *) _mm_malloc( I->egroups * sizeof(float), 64);
-
-	// Allocate Locks
-	#ifdef OPENMP
-	omp_lock_t * locks = init_locks(I);
-	for( int i = 0; i < I->source_regions; i++)
-		sources[i].locks = &locks[i * I->course_axial_intervals];
-	#endif
-
-	// Initialize fine source and flux to random numbers
-	for( int i = 0; i < I->source_regions; i++ )
-		for( int j = 0; j < I->fine_axial_intervals; j++ )
-			for( int k = 0; k < I->egroups; k++ )
-			{
-				sources[i].fine_source[j * I->egroups + k] = rand() / RAND_MAX;
-				sources[i].fine_flux[j * I->egroups + k] = rand() / RAND_MAX;
-			}
-
-	// Initialize SigT Values
-	for( int i = 0; i < I->source_regions; i++ )
-		for( int j = 0; j < I->egroups; j++ )
-			sources[i].sigT[j] = rand() / RAND_MAX;
-
-	return sources;
-
-}
-
 Source * initialize_sources( Input * I )
 {
 	size_t nbytes = 0;
@@ -131,7 +86,11 @@ Table * buildExponentialTable( float precision, float maxVal )
 	float dx = maxVal / (float) N;
 
 	// allocate an array to store information
+	#ifdef INTEL
 	float * tableVals = _mm_malloc( (2 * N ) * sizeof(float), 64 );
+	#else
+	float * tableVals = malloc( (2 * N ) * sizeof(float) );
+	#endif
 
 	// store linear segment information (slope and y-intercept)
 	for( int n = 0; n < N; n++ )
@@ -151,6 +110,7 @@ Table * buildExponentialTable( float precision, float maxVal )
 	return table;
 }
 
+#ifdef INTEL
 SIMD_Vectors aligned_allocate_simd_vectors(Input * I)
 {
 	SIMD_Vectors A;
@@ -170,6 +130,7 @@ SIMD_Vectors aligned_allocate_simd_vectors(Input * I)
 	A.t4 = (float *) _mm_malloc(I->egroups * sizeof(float), 64);
 	return A;
 }
+#endif
 
 SIMD_Vectors allocate_simd_vectors(Input * I)
 {

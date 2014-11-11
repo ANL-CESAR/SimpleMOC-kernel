@@ -14,12 +14,18 @@ void run_kernel( Input * I, Source * S, Table * table)
 		// Create Thread Local Random Seed
 		unsigned int seed = time(NULL) * (thread+1);
 
-		// Allocate Thread Local SIMD Vectors
+		// Allocate Thread Local SIMD Vectors (align if using intel compiler)
+		#ifdef INTEL
 		SIMD_Vectors simd_vecs = aligned_allocate_simd_vectors(I);
-
-		// Allocate Thread Local Flux Vector
 		float * state_flux = (float *) _mm_malloc(
 				I->egroups * sizeof(float), 64);
+		#else
+		SIMD_Vectors simd_vecs = allocate_simd_vectors(I);
+		float * state_flux = (float *) malloc(
+				I->egroups * sizeof(float));
+		#endif
+
+		// Allocate Thread Local Flux Vector
 		for( int i = 0; i < I->egroups; i++ )
 			state_flux[i] = rand_r(&seed) / RAND_MAX;
 
