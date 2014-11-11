@@ -8,7 +8,7 @@ Input * set_default_input( void )
 	I->source_regions = 2250;
 	I->course_axial_intervals = 9;
 	I->fine_axial_intervals = 5;
-	I->segments = 20000000;
+	I->segments = 50000000;
 	I->egroups = 100;
 
 	#ifdef PAPI
@@ -22,31 +22,75 @@ Input * set_default_input( void )
 	return I;
 }
 
+Source * aligned_initialize_sources( Input * I )
+{
+	// Source Data Structure Allocation
+	Source * sources = (Source *) _mm_malloc(
+			I->source_regions * sizeof(Source), 64);
+
+	// Allocate Fine Source Data
+	for( int i = 0; i < I->source_regions; i++ )
+		sources[i].fine_source = (float *) _mm_malloc(I->fine_axial_intervals
+				* I->egroups * sizeof(float), 64);
+
+	// Allocate Fine Flux Data
+	for( int i = 0; i < I->source_regions; i++ )
+		sources[i].fine_flux = (float *) _mm_malloc(I->fine_axial_intervals
+				* I->egroups * sizeof(float), 64);
+
+	// Allocate SigT
+	for( int i = 0; i < I->source_regions; i++ )
+		sources[i].sigT = (float *) _mm_malloc( I->egroups * sizeof(float), 64);
+
+	// Allocate Locks
+	#ifdef OPENMP
+	omp_lock_t * locks = init_locks(I);
+	for( int i = 0; i < I->source_regions; i++)
+		sources[i].locks = &locks[i * I->course_axial_intervals];
+	#endif
+
+	// Initialize fine source and flux to random numbers
+	for( int i = 0; i < I->source_regions; i++ )
+		for( int j = 0; j < I->fine_axial_intervals; j++ )
+			for( int k = 0; k < I->egroups; k++ )
+			{
+				sources[i].fine_source[j * I->egroups + k] = rand() / RAND_MAX;
+				sources[i].fine_flux[j * I->egroups + k] = rand() / RAND_MAX;
+			}
+
+	// Initialize SigT Values
+	for( int i = 0; i < I->source_regions; i++ )
+		for( int j = 0; j < I->egroups; j++ )
+			sources[i].sigT[j] = rand() / RAND_MAX;
+
+	return sources;
+
+}
 
 Source * initialize_sources( Input * I )
 {
 	size_t nbytes = 0;
 
 	// Source Data Structure Allocation
-	Source * sources = (Source *) _mm_malloc( I->source_regions * sizeof(Source), 64);
+	Source * sources = (Source *) malloc( I->source_regions * sizeof(Source));
 	nbytes += I->source_regions * sizeof(Source);
 
 	// Allocate Fine Source Data
-	float * data = (float *) _mm_malloc(
+	float * data = (float *) malloc(
 			I->source_regions * I->fine_axial_intervals *
-			I->egroups * sizeof(float), 64);
+			I->egroups * sizeof(float));
 	for( int i = 0; i < I->source_regions; i++ )
 		sources[i].fine_source = &data[i*I->fine_axial_intervals*I->egroups];
 
 	// Allocate Fine Flux Data
-	data = (float *) _mm_malloc(
+	data = (float *) malloc(
 			I->source_regions * I->fine_axial_intervals *
-			I->egroups * sizeof(float), 64);
+			I->egroups * sizeof(float));
 	for( int i = 0; i < I->source_regions; i++ )
 		sources[i].fine_flux = &data[i*I->fine_axial_intervals*I->egroups];
 
 	// Allocate SigT
-	data = (float *) _mm_malloc( I->source_regions * I->egroups * sizeof(float), 64);
+	data = (float *) malloc( I->source_regions * I->egroups * sizeof(float));
 	for( int i = 0; i < I->source_regions; i++ )
 		sources[i].sigT = &data[i * I->egroups];
 
@@ -78,7 +122,7 @@ Source * initialize_sources( Input * I )
 Table * buildExponentialTable( float precision, float maxVal )
 {
 	// define table
-	Table * table = (Table *) _mm_malloc(sizeof(Table), 64);
+	Table * table = (Table *) malloc(sizeof(Table));
 
 	// compute number of arry values
 	int N = (int) ( maxVal * sqrt(1.0 / ( 8.0 * precision * 0.01 ) ) );
@@ -168,7 +212,7 @@ omp_lock_t * init_locks( Input * I )
 {
 	// Allocate locks array
 	long n_locks = I->source_regions * I->course_axial_intervals; 
-	omp_lock_t * locks = (omp_lock_t *) _mm_malloc( n_locks* sizeof(omp_lock_t), 64);
+	omp_lock_t * locks = (omp_lock_t *) malloc( n_locks* sizeof(omp_lock_t));
 
 	// Initialize locks array
 	for( long i = 0; i < n_locks; i++ )
