@@ -28,25 +28,25 @@ Source * initialize_sources( Input * I )
 	size_t nbytes = 0;
 
 	// Source Data Structure Allocation
-	Source * sources = (Source *) malloc( I->source_regions * sizeof(Source));
+	Source * sources = (Source *) _mm_malloc( I->source_regions * sizeof(Source), 64);
 	nbytes += I->source_regions * sizeof(Source);
 
 	// Allocate Fine Source Data
-	float * data = (float *) malloc(
+	float * data = (float *) _mm_malloc(
 			I->source_regions * I->fine_axial_intervals *
-			I->egroups * sizeof(float));
+			I->egroups * sizeof(float), 64);
 	for( int i = 0; i < I->source_regions; i++ )
 		sources[i].fine_source = &data[i*I->fine_axial_intervals*I->egroups];
 
 	// Allocate Fine Flux Data
-	data = (float *) malloc(
+	data = (float *) _mm_malloc(
 			I->source_regions * I->fine_axial_intervals *
-			I->egroups * sizeof(float));
+			I->egroups * sizeof(float), 64);
 	for( int i = 0; i < I->source_regions; i++ )
 		sources[i].fine_flux = &data[i*I->fine_axial_intervals*I->egroups];
 
 	// Allocate SigT
-	data = (float *) malloc( I->source_regions * I->egroups * sizeof(float));
+	data = (float *) _mm_malloc( I->source_regions * I->egroups * sizeof(float), 64);
 	for( int i = 0; i < I->source_regions; i++ )
 		sources[i].sigT = &data[i * I->egroups];
 
@@ -78,7 +78,7 @@ Source * initialize_sources( Input * I )
 Table * buildExponentialTable( float precision, float maxVal )
 {
 	// define table
-	Table * table = (Table *) malloc(sizeof(Table));
+	Table * table = (Table *) _mm_malloc(sizeof(Table), 64);
 
 	// compute number of arry values
 	int N = (int) ( maxVal * sqrt(1.0 / ( 8.0 * precision * 0.01 ) ) );
@@ -87,7 +87,7 @@ Table * buildExponentialTable( float precision, float maxVal )
 	float dx = maxVal / (float) N;
 
 	// allocate an array to store information
-	float * tableVals = malloc( (2 * N ) * sizeof(float) );
+	float * tableVals = _mm_malloc( (2 * N ) * sizeof(float), 64 );
 
 	// store linear segment information (slope and y-intercept)
 	for( int n = 0; n < N; n++ )
@@ -107,6 +107,25 @@ Table * buildExponentialTable( float precision, float maxVal )
 	return table;
 }
 
+SIMD_Vectors aligned_allocate_simd_vectors(Input * I)
+{
+	SIMD_Vectors A;
+	A.q0 = (float *) _mm_malloc(I->egroups * sizeof(float), 64);
+	A.q1 = (float *) _mm_malloc(I->egroups * sizeof(float), 64);
+	A.q2 = (float *) _mm_malloc(I->egroups * sizeof(float), 64);
+	A.sigT = (float *) _mm_malloc(I->egroups * sizeof(float), 64);
+	A.tau = (float *) _mm_malloc(I->egroups * sizeof(float), 64);
+	A.sigT2 =(float *) _mm_malloc(I->egroups * sizeof(float), 64);
+	A.expVal =(float *) _mm_malloc(I->egroups * sizeof(float), 64);
+	A.reuse = (float *) _mm_malloc(I->egroups * sizeof(float), 64);
+	A.flux_integral = (float *) _mm_malloc(I->egroups * sizeof(float), 64);
+	A.tally = (float *) _mm_malloc(I->egroups * sizeof(float), 64);
+	A.t1 = (float *) _mm_malloc(I->egroups * sizeof(float), 64);
+	A.t2 = (float *) _mm_malloc(I->egroups * sizeof(float), 64);
+	A.t3 = (float *) _mm_malloc(I->egroups * sizeof(float), 64);
+	A.t4 = (float *) _mm_malloc(I->egroups * sizeof(float), 64);
+	return A;
+}
 
 SIMD_Vectors allocate_simd_vectors(Input * I)
 {
@@ -149,7 +168,7 @@ omp_lock_t * init_locks( Input * I )
 {
 	// Allocate locks array
 	long n_locks = I->source_regions * I->course_axial_intervals; 
-	omp_lock_t * locks = (omp_lock_t *) malloc( n_locks* sizeof(omp_lock_t));
+	omp_lock_t * locks = (omp_lock_t *) _mm_malloc( n_locks* sizeof(omp_lock_t), 64);
 
 	// Initialize locks array
 	for( long i = 0; i < n_locks; i++ )

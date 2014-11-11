@@ -11,6 +11,7 @@
 #include<assert.h>
 #include<pthread.h>
 #include<unistd.h>
+#include<malloc.h>
 
 #ifdef OPENMP
 #include<omp.h>
@@ -85,6 +86,7 @@ float interpolateTable( Table * table, float x);
 Source * initialize_sources( Input * I );
 Table * buildExponentialTable( float precision, float maxVal );
 Input * set_default_input( void );
+SIMD_Vectors aligned_allocate_simd_vectors(Input * I);
 SIMD_Vectors allocate_simd_vectors(Input * I);
 double get_time(void);
 #ifdef OPENMP

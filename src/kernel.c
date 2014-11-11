@@ -15,10 +15,11 @@ void run_kernel( Input * I, Source * S, Table * table)
 		unsigned int seed = time(NULL) * (thread+1);
 
 		// Allocate Thread Local SIMD Vectors
-		SIMD_Vectors simd_vecs = allocate_simd_vectors(I);
+		SIMD_Vectors simd_vecs = aligned_allocate_simd_vectors(I);
 
 		// Allocate Thread Local Flux Vector
-		float * state_flux = (float *) malloc( I->egroups * sizeof(float));
+		float * state_flux = (float *) _mm_malloc(
+				I->egroups * sizeof(float), 64);
 		for( int i = 0; i < I->egroups; i++ )
 			state_flux[i] = rand_r(&seed) / RAND_MAX;
 
@@ -33,7 +34,7 @@ void run_kernel( Input * I, Source * S, Table * table)
 		#endif
 
 		// Enter OMP For Loop over Segments
-		#pragma omp for schedule(static)
+		#pragma omp for schedule(dynamic, 1000)
 		for( long i = 0; i < I->segments; i++ )
 		{
 			// Pick Random QSR
