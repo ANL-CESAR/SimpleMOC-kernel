@@ -70,7 +70,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		int QSR_id, int FAI_id, float * restrict state_flux,
 		SIMD_Vectors * restrict simd_vecs, Table * restrict table) 
 {
-	// Unload local simd vectors
+	// Unload local vector vectors
 	float * restrict q0 =            simd_vecs->q0;
 	float * restrict q1 =            simd_vecs->q1;
 	float * restrict q2 =            simd_vecs->q2;
@@ -97,20 +97,22 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	float mu2 = 0.3f;
 	float ds = 0.7f;
 
+	const int egroups = I->egroups;
+
 	// load fine source region flux vector
-	float * FSR_flux = &S[QSR_id].fine_flux[FAI_id * I->egroups];
+	float * FSR_flux = &S[QSR_id].fine_flux[FAI_id * egroups];
 
 	if( FAI_id == 0 )
 	{
-		float * f2 = &S[QSR_id].fine_source[FAI_id*I->egroups]; 
-		float * f3 = &S[QSR_id].fine_source[(FAI_id+1)*I->egroups]; 
+		float * f2 = &S[QSR_id].fine_source[FAI_id*egroups]; 
+		float * f3 = &S[QSR_id].fine_source[(FAI_id+1)*egroups]; 
 		// cycle over energy groups
 		#ifdef INTEL
-		#pragma simd
+		#pragma vector
 		#elif defined IBM
-		#pragma simd_level(10)
+		#pragma vector_level(10)
 		#endif
-		for( int g = 0; g < I->egroups; g++)
+		for( int g = 0; g < egroups; g++)
 		{
 			// load neighboring sources
 			float y2 = f2[g];
@@ -128,15 +130,15 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	}
 	else if ( FAI_id == I->fine_axial_intervals - 1 )
 	{
-		float * f1 = &S[QSR_id].fine_source[(FAI_id-1)*I->egroups]; 
-		float * f2 = &S[QSR_id].fine_source[FAI_id*I->egroups]; 
+		float * f1 = &S[QSR_id].fine_source[(FAI_id-1)*egroups]; 
+		float * f2 = &S[QSR_id].fine_source[FAI_id*egroups]; 
 		// cycle over energy groups
 		#ifdef INTEL
-		#pragma simd
+		#pragma vector
 		#elif defined IBM
-		#pragma simd_level(10)
+		#pragma vector_level(10)
 		#endif
-		for( int g = 0; g < I->egroups; g++)
+		for( int g = 0; g < egroups; g++)
 		{
 			// load neighboring sources
 			float y1 = f1[g];
@@ -154,16 +156,16 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	}
 	else
 	{
-		float * f1 = &S[QSR_id].fine_source[(FAI_id-1)*I->egroups]; 
-		float * f2 = &S[QSR_id].fine_source[FAI_id*I->egroups]; 
-		float * f3 = &S[QSR_id].fine_source[(FAI_id+1)*I->egroups]; 
+		float * f1 = &S[QSR_id].fine_source[(FAI_id-1)*egroups]; 
+		float * f2 = &S[QSR_id].fine_source[FAI_id*egroups]; 
+		float * f3 = &S[QSR_id].fine_source[(FAI_id+1)*egroups]; 
 		// cycle over energy groups
 		#ifdef INTEL
-		#pragma simd
+		#pragma vector
 		#elif defined IBM
-		#pragma simd_level(10)
+		#pragma vector_level(10)
 		#endif
-		for( int g = 0; g < I->egroups; g++)
+		for( int g = 0; g < egroups; g++)
 		{
 			// load neighboring sources
 			float y1 = f1[g]; 
@@ -185,11 +187,11 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 
 	// cycle over energy groups
 	#ifdef INTEL
-	#pragma simd
+	#pragma vector
 	#elif defined IBM
-	#pragma simd_level(10)
+	#pragma vector_level(10)
 	#endif
-	for( int g = 0; g < I->egroups; g++)
+	for( int g = 0; g < egroups; g++)
 	{
 		// load total cross section
 		sigT[g] = S[QSR_id].sigT[g];
@@ -201,34 +203,34 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 
 	// cycle over energy groups
 	#ifdef INTEL
-	#pragma simd
+	#pragma vector aligned
 	#elif defined IBM
-	#pragma simd_level(10)
+	#pragma vector_level(10)
 	#endif
-	for( int g = 0; g < I->egroups; g++)
+	for( int g = 0; g < egroups; g++)
 		expVal[g] = interpolateTable( table, tau[g] );  
 
 	// Flux Integral
 
 	// Re-used Term
 	#ifdef INTEL
-	#pragma simd
+	#pragma vector aligned
 	#elif defined IBM
-	#pragma simd_level(10)
+	#pragma vector_level(10)
 	#endif
-	for( int g = 0; g < I->egroups; g++)
+	for( int g = 0; g < egroups; g++)
 	{
 		reuse[g] = tau[g] * (tau[g] - 2.f) + 2.f * expVal[g] 
 			/ (sigT[g] * sigT2[g]); 
 	}
 
-	//#pragma vector nontemporal
+	//#pragma vector alignednontemporal
 	#ifdef INTEL
-	#pragma simd
+	#pragma vector aligned
 	#elif defined IBM
-	#pragma simd_level(10)
+	#pragma vector_level(10)
 	#endif
-	for( int g = 0; g < I->egroups; g++)
+	for( int g = 0; g < egroups; g++)
 	{
 		// add contribution to new source flux
 		flux_integral[g] = (q0[g] * tau[g] + (sigT[g] * state_flux[g] - q0[g])
@@ -238,11 +240,11 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	}
 
 	#ifdef INTEL
-	#pragma simd
+	#pragma vector aligned
 	#elif defined IBM
-	#pragma simd_level(10)
+	#pragma vector_level(10)
 	#endif
-	for( int g = 0; g < I->egroups; g++)
+	for( int g = 0; g < egroups; g++)
 	{
 		// Prepare tally
 		tally[g] = weight * flux_integral[g];
@@ -253,11 +255,11 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#endif
 
 	#ifdef INTEL
-	#pragma simd
+	#pragma vector
 	#elif defined IBM
-	#pragma simd_level(10)
+	#pragma vector_level(10)
 	#endif
-	for( int g = 0; g < I->egroups; g++)
+	for( int g = 0; g < egroups; g++)
 	{
 		FSR_flux[g] += tally[g];
 	}
@@ -268,51 +270,51 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 
 	// Term 1
 	#ifdef INTEL
-	#pragma simd
+	#pragma vector aligned
 	#elif defined IBM
-	#pragma simd_level(10)
+	#pragma vector_level(10)
 	#endif
-	for( int g = 0; g < I->egroups; g++)
+	for( int g = 0; g < egroups; g++)
 	{
 		t1[g] = q0[g] * expVal[g] / sigT[g];  
 	}
 	// Term 2
 	#ifdef INTEL
-	#pragma simd
+	#pragma vector aligned
 	#elif defined IBM
-	#pragma simd_level(10)
+	#pragma vector_level(10)
 	#endif
-	for( int g = 0; g < I->egroups; g++)
+	for( int g = 0; g < egroups; g++)
 	{
 		t2[g] = q1[g] * mu * (tau[g] - expVal[g]) / sigT2[g]; 
 	}
 	// Term 3
 	#ifdef INTEL
-	#pragma simd
+	#pragma vector aligned
 	#elif defined IBM
-	#pragma simd_level(10)
+	#pragma vector_level(10)
 	#endif
-	for( int g = 0; g < I->egroups; g++)
+	for( int g = 0; g < egroups; g++)
 	{
 		t3[g] =	q2[g] * mu2 * reuse[g];
 	}
 	// Term 4
 	#ifdef INTEL
-	#pragma simd
+	#pragma vector aligned
 	#elif defined IBM
-	#pragma simd_level(10)
+	#pragma vector_level(10)
 	#endif
-	for( int g = 0; g < I->egroups; g++)
+	for( int g = 0; g < egroups; g++)
 	{
 		t4[g] = state_flux[g] * (1.f - expVal[g]);
 	}
 	// Total psi
 	#ifdef INTEL
-	#pragma simd
+	#pragma vector aligned
 	#elif defined IBM
-	#pragma simd_level(10)
+	#pragma vector_level(10)
 	#endif
-	for( int g = 0; g < I->egroups; g++)
+	for( int g = 0; g < egroups; g++)
 	{
 		state_flux[g] = t1[g] + t2[g] + t3[g] + t4[g];
 	}

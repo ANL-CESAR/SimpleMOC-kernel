@@ -51,7 +51,7 @@ ifeq ($(MACHINE),bluegene)
 endif
 
 # Standard Flags
-CFLAGS := -std=gnu99
+CFLAGS := -std=gnu99 -vec-report3
 
 # Linker Flags
 LDFLAGS = -lm
