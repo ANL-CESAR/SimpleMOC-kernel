@@ -91,8 +91,8 @@ endif
 # PAPI source (you may need to provide -I and -L pointing
 # to PAPI depending on your installation
 ifeq ($(PAPI),yes)
-  CFLAGS += -DPAPI
-  LDFLAGS += -lpapi
+  CFLAGS += -DPAPI -I/soft/libraries/papi-5.3.0/include
+  LDFLAGS += -L/soft/libraries/papi-5.3.0/lib -lpapi
   OPENMP = yes
 endif
 

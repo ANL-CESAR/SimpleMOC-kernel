@@ -40,7 +40,7 @@ void run_kernel( Input * I, Source * S, Table * table)
 		#endif
 
 		// Enter OMP For Loop over Segments
-		#pragma omp for schedule(dynamic, 1000)
+		#pragma omp for schedule(dynamic,100)
 		for( long i = 0; i < I->segments; i++ )
 		{
 			// Pick Random QSR
@@ -346,8 +346,9 @@ float interpolateTable( Table * restrict table, float x)
 		   exit(1);
 		   }
 		   */
-		float slope = table->values[ 2 * interval ];
-		float intercept = table->values[ 2 * interval + 1 ];
+		interval = interval * 2;
+		float slope = table->values[ interval ];
+		float intercept = table->values[ interval + 1 ];
 		float val = slope * x + intercept;
 		return val;
 	}
