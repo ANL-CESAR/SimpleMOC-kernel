@@ -1,6 +1,6 @@
 #include "SimpleMOC-kernel_header.h"
 
-void run_kernel( Input * I, Source * S, Table * table)
+void run_kernel( Input I, Source * S, Table table)
 {
 	// Enter Parallel Region
 	#pragma omp parallel default(none) shared(I, S, table)
@@ -18,15 +18,15 @@ void run_kernel( Input * I, Source * S, Table * table)
 		#ifdef INTEL
 		SIMD_Vectors simd_vecs = aligned_allocate_simd_vectors(I);
 		float * state_flux = (float *) _mm_malloc(
-				I->egroups * sizeof(float), 64);
+				I.egroups * sizeof(float), 64);
 		#else
 		SIMD_Vectors simd_vecs = allocate_simd_vectors(I);
 		float * state_flux = (float *) malloc(
-				I->egroups * sizeof(float));
+				I.egroups * sizeof(float));
 		#endif
 
 		// Allocate Thread Local Flux Vector
-		for( int i = 0; i < I->egroups; i++ )
+		for( int i = 0; i < I.egroups; i++ )
 			state_flux[i] = rand_r(&seed) / RAND_MAX;
 
 		// Initialize PAPI Counters (if enabled)
@@ -41,13 +41,13 @@ void run_kernel( Input * I, Source * S, Table * table)
 
 		// Enter OMP For Loop over Segments
 		#pragma omp for schedule(dynamic,100)
-		for( long i = 0; i < I->segments; i++ )
+		for( long i = 0; i < I.segments; i++ )
 		{
 			// Pick Random QSR
-			int QSR_id = rand_r(&seed) % I->source_regions;
+			int QSR_id = rand_r(&seed) % I.source_regions;
 
 			// Pick Random Fine Axial Interval
-			int FAI_id = rand_r(&seed) % I->fine_axial_intervals;
+			int FAI_id = rand_r(&seed) % I.fine_axial_intervals;
 
 			// Attenuate Segment
 			attenuate_segment( I, S, QSR_id, FAI_id, state_flux,
@@ -72,9 +72,9 @@ void run_kernel( Input * I, Source * S, Table * table)
 	}
 }
 
-void attenuate_segment( Input * restrict I, Source * restrict S,
+void attenuate_segment( Input I, Source * restrict S,
 		int QSR_id, int FAI_id, float * restrict state_flux,
-		SIMD_Vectors * restrict simd_vecs, Table * restrict table) 
+		SIMD_Vectors * restrict simd_vecs, Table table) 
 {
 	// Unload local vector vectors
 	float * restrict q0 =            simd_vecs->q0;
@@ -103,7 +103,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	float mu2 = 0.3f;
 	float ds = 0.7f;
 
-	const int egroups = I->egroups;
+	const int egroups = I.egroups;
 
 	// load fine source region flux vector
 	float * FSR_flux = &S[QSR_id].fine_flux[FAI_id * egroups];
@@ -134,7 +134,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 			q2[g] = 0;
 		}
 	}
-	else if ( FAI_id == I->fine_axial_intervals - 1 )
+	else if ( FAI_id == I.fine_axial_intervals - 1 )
 	{
 		float * f1 = &S[QSR_id].fine_source[(FAI_id-1)*egroups]; 
 		float * f2 = &S[QSR_id].fine_source[FAI_id*egroups]; 
@@ -328,14 +328,14 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 
 /* Interpolates a formed exponential table to compute ( 1- exp(-x) )
  *  at the desired x value */
-float interpolateTable( Table * restrict table, float x)
+float interpolateTable( Table  table, float x)
 {
 	// check to ensure value is in domain
-	if( x > table->maxVal )
+	if( x > table.maxVal )
 		return 1.0f;
 	else
 	{
-		int interval = (int) ( x / table->dx + 0.5f * table->dx );
+		int interval = (int) ( x / table.dx + 0.5f * table.dx );
 		/*
 		   if( interval >= table->N || interval < 0)
 		   {
@@ -347,8 +347,8 @@ float interpolateTable( Table * restrict table, float x)
 		   }
 		   */
 		interval = interval * 2;
-		float slope = table->values[ interval ];
-		float intercept = table->values[ interval + 1 ];
+		float slope = table.values[ interval ];
+		float intercept = table.values[ interval + 1 ];
 		float val = slope * x + intercept;
 		return val;
 	}

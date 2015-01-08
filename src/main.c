@@ -10,13 +10,13 @@ int main( int argc, char * argv[] )
 
 	srand(time(NULL));
 
-	Input * I = set_default_input();
-	read_CLI( argc, argv, I );
+	Input I = set_default_input();
+	read_CLI( argc, argv, &I );
 
 	logo(version);
 
 	#ifdef OPENMP
-	omp_set_num_threads(I->nthreads); 
+	omp_set_num_threads(I.nthreads); 
 	#endif
 
 	print_input_summary(I);
@@ -25,7 +25,7 @@ int main( int argc, char * argv[] )
 	Source * S = initialize_sources(I); 
 	
 	// Build Exponential Table
-	Table * table = buildExponentialTable( 0.01, 10.0 );
+	Table table = buildExponentialTable();
 
 	center_print("SIMULATION", 79);
 	border_print();
@@ -45,7 +45,7 @@ int main( int argc, char * argv[] )
 	border_print();
 
 	double tpi = ((double) (stop - start) /
-			(double)I->segments / (double) I->egroups) * 1.0e9;
+			(double)I.segments / (double) I.egroups) * 1.0e9;
 	printf("%-25s%.3lf seconds\n", "Runtime:", stop-start);
 	printf("%-25s%.3lf ns\n", "Time per Intersection:", tpi);
 	border_print();

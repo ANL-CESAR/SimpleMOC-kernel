@@ -68,21 +68,21 @@ void fancy_int( int a )
 }
 
 // Prints out the summary of User input
-void print_input_summary(Input * I)
+void print_input_summary(Input I)
 {
 	center_print("INPUT SUMMARY", 79);
 	border_print();
 	#ifdef OPENMP
-	printf("%-25s%d\n", "Number of Threads:", I->nthreads);
+	printf("%-25s%d\n", "Number of Threads:", I.nthreads);
 	#endif
-	printf("%-25s%d\n", "Energy Groups:", I->egroups);
-	printf("%-25s%d\n", "Source Regions:", I->source_regions);
-	printf("%-25s%d\n", "Course Axial Intervals:", I->course_axial_intervals);
-	printf("%-25s%d\n", "Fine Axial Intervals:", I->fine_axial_intervals);
-	printf("%-25s", "Segments:"); fancy_int(I->segments);
+	printf("%-25s%d\n", "Energy Groups:", I.egroups);
+	printf("%-25s%d\n", "Source Regions:", I.source_regions);
+	printf("%-25s%d\n", "Course Axial Intervals:", I.course_axial_intervals);
+	printf("%-25s%d\n", "Fine Axial Intervals:", I.fine_axial_intervals);
+	printf("%-25s", "Segments:"); fancy_int(I.segments);
 	#ifdef PAPI
-    if( I->papi_event_set == -1)
-        printf("%-25s%s\n", "PAPI event to count:", I->event_name);
+    if( I.papi_event_set == -1)
+        printf("%-25s%s\n", "PAPI event to count:", I.event_name);
 	#endif
 	border_print();
 }
