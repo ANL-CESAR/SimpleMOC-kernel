@@ -29,11 +29,11 @@ typedef struct{
 
 // Source Region Structure
 typedef struct{
-	float fine_flux_id;
-	float fine_source_id;
-	float sigT_id;
+	long fine_flux_id;
+	long fine_source_id;
+	long sigT_id;
 	#ifdef OPENMP
-	omp_lock_t locks_id;
+	long locks_id;
 	#endif
 } Source;
 
@@ -75,15 +75,14 @@ typedef struct{
 } SIMD_Vectors;
 
 // kernel.c
-void run_kernel( Input I, Source * S, Table table);
-void attenuate_segment( Input I, Source * restrict S,
+void run_kernel( Input I, Source * S, Source_Arrays SA, Table table);
+void attenuate_segment( Input I, Source * restrict S, Source_Arrays SA,
 		int QSR_id, int FAI_id, float * restrict state_flux,
 		SIMD_Vectors * restrict simd_vecs, Table table); 
 float interpolateTable( Table table, float x);
 
 // init.c
-Source * aligned_initialize_sources( Input I );
-Source * initialize_sources( Input I );
+Source * initialize_sources( Input I, Source_Arrays * SA );
 Table buildExponentialTable( void );
 Input set_default_input( void );
 SIMD_Vectors aligned_allocate_simd_vectors(Input I);

@@ -1,9 +1,9 @@
 #include "SimpleMOC-kernel_header.h"
 
-void run_kernel( Input I, Source * S, Table table)
+void run_kernel( Input I, Source * S, Source_Arrays SA, Table table)
 {
 	// Enter Parallel Region
-	#pragma omp parallel default(none) shared(I, S, table)
+	#pragma omp parallel default(none) shared(I, S, table, SA)
 	{
 		#ifdef OPENMP
 		int thread = omp_get_thread_num();
@@ -40,13 +40,13 @@ void run_kernel( Input I, Source * S, Table table)
 			int FAI_id = rand_r(&seed) % I.fine_axial_intervals;
 
 			// Attenuate Segment
-			attenuate_segment( I, S, QSR_id, FAI_id, state_flux,
+			attenuate_segment( I, S, SA, QSR_id, FAI_id, state_flux,
 					&simd_vecs, table);
 		}
 	}
 }
 
-void attenuate_segment( Input I, Source * restrict S,
+void attenuate_segment( Input I, Source * restrict S, Source_Arrays SA,
 		int QSR_id, int FAI_id, float * restrict state_flux,
 		SIMD_Vectors * restrict simd_vecs, Table table) 
 {
@@ -80,12 +80,12 @@ void attenuate_segment( Input I, Source * restrict S,
 	const int egroups = I.egroups;
 
 	// load fine source region flux vector
-	float * FSR_flux = &S[QSR_id].fine_flux[FAI_id * egroups];
+	float * FSR_flux = &SA.fine_flux_arr[ S[QSR_id].fine_flux_id + FAI_id * egroups];
 
 	if( FAI_id == 0 )
 	{
-		float * f2 = &S[QSR_id].fine_source[FAI_id*egroups]; 
-		float * f3 = &S[QSR_id].fine_source[(FAI_id+1)*egroups]; 
+		float * f2 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
+		float * f3 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
 		// cycle over energy groups
 		#ifdef INTEL
 		#pragma vector
@@ -110,8 +110,8 @@ void attenuate_segment( Input I, Source * restrict S,
 	}
 	else if ( FAI_id == I.fine_axial_intervals - 1 )
 	{
-		float * f1 = &S[QSR_id].fine_source[(FAI_id-1)*egroups]; 
-		float * f2 = &S[QSR_id].fine_source[FAI_id*egroups]; 
+		float * f1 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
+		float * f2 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
 		// cycle over energy groups
 		#ifdef INTEL
 		#pragma vector
@@ -136,9 +136,9 @@ void attenuate_segment( Input I, Source * restrict S,
 	}
 	else
 	{
-		float * f1 = &S[QSR_id].fine_source[(FAI_id-1)*egroups]; 
-		float * f2 = &S[QSR_id].fine_source[FAI_id*egroups]; 
-		float * f3 = &S[QSR_id].fine_source[(FAI_id+1)*egroups]; 
+		float * f1 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
+		float * f2 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
+		float * f3 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
 		// cycle over energy groups
 		#ifdef INTEL
 		#pragma vector
@@ -174,7 +174,7 @@ void attenuate_segment( Input I, Source * restrict S,
 	for( int g = 0; g < egroups; g++)
 	{
 		// load total cross section
-		sigT[g] = S[QSR_id].sigT[g];
+		sigT[g] = SA.sigT_arr[ S[QSR_id].sigT_id + g];
 
 		// calculate common values for efficiency
 		tau[g] = sigT[g] * ds;
@@ -231,7 +231,7 @@ void attenuate_segment( Input I, Source * restrict S,
 	}
 
 	#ifdef OPENMP
-	omp_set_lock(S[QSR_id].locks + FAI_id);
+	omp_set_lock(&SA.locks_arr[ S[QSR_id].locks_id + FAI_id]);
 	#endif
 
 	#ifdef INTEL
@@ -245,7 +245,7 @@ void attenuate_segment( Input I, Source * restrict S,
 	}
 
 	#ifdef OPENMP
-	omp_unset_lock(S[QSR_id].locks + FAI_id);
+	omp_unset_lock(&SA.locks_arr[ S[QSR_id].locks_id + FAI_id]);
 	#endif
 
 	// Term 1

@@ -18,7 +18,8 @@ int main( int argc, char * argv[] )
 	print_input_summary(I);
 
 	// Build Source Data
-	Source * S = initialize_sources(I); 
+	Source_Arrays SA;
+	Source * S = initialize_sources(I, &SA); 
 	
 	// Build Exponential Table
 	Table table = buildExponentialTable();
@@ -31,7 +32,7 @@ int main( int argc, char * argv[] )
 
 	// Run Simulation Kernel Loop
 	start = get_time();
-	run_kernel(I, S, table);
+	run_kernel(I, S, SA, table);
 	stop = get_time();
 
 	printf("Simulation Complete.\n");
