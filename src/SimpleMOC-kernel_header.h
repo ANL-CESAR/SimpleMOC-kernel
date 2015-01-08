@@ -33,9 +33,20 @@ typedef struct{
 	float fine_source_id;
 	float sigT_id;
 	#ifdef OPENMP
-	omp_lock_t locks;
+	omp_lock_t locks_id;
 	#endif
 } Source;
+
+// Source Arrays
+typedef struct{
+	float * fine_flux_arr;
+	float * fine_source_arr;
+	float * sigT_arr;
+	#ifdef OPENMP
+	omp_lock_t * locks_arr;
+	#endif
+} Source_Arrays;
+
 
 // Table structure for computing exponential
 typedef struct{

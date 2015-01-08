@@ -22,53 +22,45 @@ Input set_default_input( void )
 	return I;
 }
 
-Source * initialize_sources( Input I )
+Source * initialize_sources( Input I, Source_Arrays * SA )
 {
-	size_t nbytes = 0;
-
 	// Source Data Structure Allocation
 	Source * sources = (Source *) malloc( I.source_regions * sizeof(Source));
-	nbytes += I.source_regions * sizeof(Source);
-
+	
 	// Allocate Fine Source Data
-	float * data = (float *) malloc(
-			I.source_regions * I.fine_axial_intervals *
-			I.egroups * sizeof(float));
+	long N_fine = I.source_regions * I.fine_axial_intervals * I.egroups;
+	SA->fine_source_arr = (float *) malloc( N_fine * sizeof(float));
 	for( int i = 0; i < I.source_regions; i++ )
-		sources[i].fine_source = &data[i*I.fine_axial_intervals*I.egroups];
+		sources[i].fine_source_id = i*I.fine_axial_intervals*I.egroups;
 
 	// Allocate Fine Flux Data
-	data = (float *) malloc(
-			I.source_regions * I.fine_axial_intervals *
-			I.egroups * sizeof(float));
+	SA->fine_flux_arr = (float *) malloc( N_fine * sizeof(float));
 	for( int i = 0; i < I.source_regions; i++ )
-		sources[i].fine_flux = &data[i*I.fine_axial_intervals*I.egroups];
+		sources[i].fine_flux_id = i*I.fine_axial_intervals*I.egroups;
 
-	// Allocate SigT
-	data = (float *) malloc( I.source_regions * I.egroups * sizeof(float));
+	// Allocate SigT Data
+	long N_sigT = I.source_regions * I.egroups;
+	SA->sigT_arr = (float *) malloc( N_sigT * sizeof(float));
 	for( int i = 0; i < I.source_regions; i++ )
-		sources[i].sigT = &data[i * I.egroups];
+		sources[i].sigT_id = i * I.egroups;
 
 	// Allocate Locks
 	#ifdef OPENMP
-	omp_lock_t * locks = init_locks(I);
+	SA->locks_arr = init_locks(I);
 	for( int i = 0; i < I.source_regions; i++)
-		sources[i].locks = &locks[i * I.course_axial_intervals];
+		sources[i].locks_id = i * I.course_axial_intervals;
 	#endif
-
+	
 	// Initialize fine source and flux to random numbers
-	for( int i = 0; i < I.source_regions; i++ )
-		for( int j = 0; j < I.fine_axial_intervals; j++ )
-			for( int k = 0; k < I.egroups; k++ )
-			{
-				sources[i].fine_source[j * I.egroups + k] = rand() / RAND_MAX;
-				sources[i].fine_flux[j * I.egroups + k] = rand() / RAND_MAX;
-			}
+	for( long i = 0; i < N_fine; i++ )
+	{
+		SA->fine_source_arr[i] = rand() / RAND_MAX;
+		SA->fine_flux_arr[i] = rand() / RAND_MAX;
+	}
 
 	// Initialize SigT Values
-	for( int i = 0; i < I.source_regions; i++ )
-		for( int j = 0; j < I.egroups; j++ )
-			sources[i].sigT[j] = rand() / RAND_MAX;
+	for( int i = 0; i < N_sigT; i++ )
+		SA->sigT_arr[i] = rand() / RAND_MAX;
 
 	return sources;
 }
