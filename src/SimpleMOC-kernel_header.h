@@ -17,10 +17,6 @@
 #include<omp.h>
 #endif
 
-#ifdef PAPI
-#include<papi.h>
-#endif
-
 // User inputs
 typedef struct{
 	int source_regions;
@@ -29,23 +25,15 @@ typedef struct{
 	long segments;
 	int egroups;
 	int nthreads;
-
-    #ifdef PAPI
-	int papi_event_set;
-    // String for command line PAPI event
-    char event_name[PAPI_MAX_STR_LEN]; 
-    // Array to accumulate PAPI counts across all threads
-    long long *vals_accum;
-    #endif
 } Input;
 
 // Source Region Structure
 typedef struct{
-	float * fine_flux;
-	float * fine_source;
-	float * sigT;
+	float fine_flux_id;
+	float fine_source_id;
+	float sigT_id;
 	#ifdef OPENMP
-	omp_lock_t * locks;
+	omp_lock_t locks;
 	#endif
 } Source;
 
@@ -102,10 +90,5 @@ void fancy_int( int a );
 void print_input_summary(Input input);
 void read_CLI( int argc, char * argv[], Input * input );
 void print_CLI_error(void);
-
-// papi.c
-void papi_serial_init(void);
-void counter_init( int *eventset, int *num_papi_events, Input I );
-void counter_stop( int * eventset, int num_papi_events, Input I );
 
 #endif

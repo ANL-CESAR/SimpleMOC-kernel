@@ -4,10 +4,6 @@ int main( int argc, char * argv[] )
 {
 	int version = 0;
 
-	#ifdef PAPI
-	papi_serial_init();
-	#endif
-
 	srand(time(NULL));
 
 	Input I = set_default_input();

@@ -7,7 +7,6 @@ OPENMP      = yes
 OPTIMIZE    = yes
 DEBUG       = yes
 PROFILE     = no
-PAPI        = no
 BENCHMARK   = no
 MIC         = no
 
@@ -86,14 +85,6 @@ endif
 ifeq ($(COMPILER),ibm)
   CFLAGS += -O5 -qhot -qsimd=auto -qalias=ansi:allptrs -qarch=qp -DIBM
 endif
-endif
-
-# PAPI source (you may need to provide -I and -L pointing
-# to PAPI depending on your installation
-ifeq ($(PAPI),yes)
-  CFLAGS += -DPAPI -I/soft/libraries/papi-5.3.0/include
-  LDFLAGS += -L/soft/libraries/papi-5.3.0/lib -lpapi
-  OPENMP = yes
 endif
 
 # OpenMP

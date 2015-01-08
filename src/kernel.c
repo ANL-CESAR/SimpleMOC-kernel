@@ -29,16 +29,6 @@ void run_kernel( Input I, Source * S, Table table)
 		for( int i = 0; i < I.egroups; i++ )
 			state_flux[i] = rand_r(&seed) / RAND_MAX;
 
-		// Initialize PAPI Counters (if enabled)
-		#ifdef PAPI
-		int eventset = PAPI_NULL;
-		int num_papi_events;
-		#pragma omp critical
-		{
-			counter_init(&eventset, &num_papi_events, I);
-		}
-		#endif
-
 		// Enter OMP For Loop over Segments
 		#pragma omp for schedule(dynamic,100)
 		for( long i = 0; i < I.segments; i++ )
@@ -53,22 +43,6 @@ void run_kernel( Input I, Source * S, Table table)
 			attenuate_segment( I, S, QSR_id, FAI_id, state_flux,
 					&simd_vecs, table);
 		}
-
-		// Stop PAPI Counters
-		#ifdef PAPI
-		if( thread == 0 )
-		{
-			printf("\n");
-			border_print();
-			center_print("PAPI COUNTER RESULTS", 79);
-			border_print();
-			printf("Count          \tSmybol      \tDescription\n");
-		}
-		{
-			#pragma omp barrier
-		}
-		counter_stop(&eventset, num_papi_events, I);
-		#endif
 	}
 }
 
