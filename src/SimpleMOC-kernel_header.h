@@ -16,6 +16,10 @@
 #include<malloc.h>
 #include<assert.h>
 
+#define CUDA_ERROR_CHECK
+ 
+#define CudaCheckError()    __cudaCheckError( __FILE__, __LINE__ )
+
 // CUDA Error Handling Macro
 #define CUDA_CALL(x) do { if((x) != cudaSuccess) { \
     printf("Error at %s:%d\n",__FILE__,__LINE__); \
@@ -29,6 +33,7 @@ typedef struct{
 	long segments;
 	int egroups;
 	int nthreads;
+	int streams;
 } Input;
 
 // Source Region Structure
@@ -67,6 +72,7 @@ Source * initialize_sources( Input I, Source_Arrays * SA );
 Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays * SA_d, Source * sources_h );
 Table buildExponentialTable( void );
 Input set_default_input( void );
+void __cudaCheckError( const char *file, const int line );
 
 // io.c
 void logo(int version);

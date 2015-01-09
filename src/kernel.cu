@@ -39,7 +39,7 @@ __global__ void run_kernel( Input I, Source * S,
 	float * t4 =            s; s+= I.egroups;
 
 	// Assign RNG state
-	curandState * localState = &state[blockId*I.egroups];
+	curandState * localState = &state[blockId % I.streams];
 
 	// Randomized variables (common accross all thread within block)
 	__shared__ int state_flux_id;

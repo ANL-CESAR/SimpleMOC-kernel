@@ -2,13 +2,10 @@
 
 __global__ void setup_kernel(curandState *state, Input I)
 {
-	int blockId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment	
-	/* Each thread gets same seed, a different sequence 
-	 *        number, no offset */
-	if( blockId >= I.segments )
+	int threadId = blockIdx.x *blockDim.x + threadIdx.x;
+	if( threadId >= I.streams)
 		return;
-	if( threadIdx.x == 0 )
-		curand_init(1234, blockId, 0, &state[blockId]);
+	curand_init(1234, threadId, 0, &state[threadId]);
 }
 
 // Initialize global flux states to random numbers on device
@@ -36,6 +33,7 @@ Input set_default_input( void )
 	I.fine_axial_intervals = 5;
 	I.segments = 50000000;
 	I.egroups = 100;
+	I.streams = 10000;
 
 	return I;
 }
@@ -108,22 +106,22 @@ Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays
 {
 	// Allocate & Copy Fine Source Data
 	long N_fine = I.source_regions * I.fine_axial_intervals * I.egroups;
-	CUDA_CALL( cudaMalloc((void **) &SA_d->fine_source_arr, N_fine * sizeof(float)) );
-	CUDA_CALL( cudaMemcpy(SA_d->fine_source_arr, SA_h->fine_source_arr, N_fine * sizeof(float), cudaMemcpyHostToDevice) );
+	cudaMalloc((void **) &SA_d->fine_source_arr, N_fine * sizeof(float));
+	cudaMemcpy(SA_d->fine_source_arr, SA_h->fine_source_arr, N_fine * sizeof(float), cudaMemcpyHostToDevice);
 
 	// Allocate & Copy Fine Flux Data
-	CUDA_CALL( cudaMalloc((void **) &SA_d->fine_flux_arr, N_fine * sizeof(float)) );
-	CUDA_CALL( cudaMemcpy(SA_d->fine_flux_arr, SA_h->fine_flux_arr, N_fine * sizeof(float), cudaMemcpyHostToDevice) );
+	cudaMalloc((void **) &SA_d->fine_flux_arr, N_fine * sizeof(float));
+	cudaMemcpy(SA_d->fine_flux_arr, SA_h->fine_flux_arr, N_fine * sizeof(float), cudaMemcpyHostToDevice);
 
 	// Allocate & Copy SigT Data
 	long N_sigT = I.source_regions * I.egroups;
-	CUDA_CALL( cudaMalloc((void **) &SA_d->sigT_arr, N_sigT * sizeof(float)) );
-	CUDA_CALL( cudaMemcpy(SA_d->sigT_arr, SA_h->sigT_arr, N_sigT * sizeof(float), cudaMemcpyHostToDevice) );
+	cudaMalloc((void **) &SA_d->sigT_arr, N_sigT * sizeof(float));
+	cudaMemcpy(SA_d->sigT_arr, SA_h->sigT_arr, N_sigT * sizeof(float), cudaMemcpyHostToDevice);
 
 	// Allocate & Copy Source Array Data
 	Source * sources_d;
-	CUDA_CALL( cudaMalloc((void **) &sources_d, I.source_regions * sizeof(Source)) );
-	CUDA_CALL( cudaMemcpy(sources_d, sources_h, I.source_regions * sizeof(Source), cudaMemcpyHostToDevice) );
+	cudaMalloc((void **) &sources_d, I.source_regions * sizeof(Source));
+	cudaMemcpy(sources_d, sources_h, I.source_regions * sizeof(Source), cudaMemcpyHostToDevice);
 
 	return sources_d;
 }
@@ -159,4 +157,29 @@ Table buildExponentialTable( void )
 	table.N = N;
 
 	return table;
+}
+
+void __cudaCheckError( const char *file, const int line )
+{
+#ifdef CUDA_ERROR_CHECK
+    cudaError err = cudaGetLastError();
+    if ( cudaSuccess != err )
+    {
+        fprintf( stderr, "cudaCheckError() failed at %s:%i : %s\n",
+                 file, line, cudaGetErrorString( err ) );
+        exit( -1 );
+    }
+ 
+    // More careful checking. However, this will affect performance.
+    // Comment away if needed.
+    err = cudaDeviceSynchronize();
+    if( cudaSuccess != err )
+    {
+        fprintf( stderr, "cudaCheckError() with sync failed at %s:%i : %s\n",
+                 file, line, cudaGetErrorString( err ) );
+        exit( -1 );
+    }
+#endif
+ 
+    return;
 }
