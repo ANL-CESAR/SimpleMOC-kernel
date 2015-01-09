@@ -32,7 +32,9 @@ int main( int argc, char * argv[] )
 
 	// Run Simulation Kernel Loop
 	start = get_time();
-	run_kernel(I, S, SA, table);
+	int block_size = 32;
+	int n_blocks = I.segments/block_size + (I.segments%block_size == 0 ? 0:1);
+	square_array <<< n_blocks, block_size >>> (I, sources_d, SA_d, table_d);
 	stop = get_time();
 
 	printf("Simulation Complete.\n");
