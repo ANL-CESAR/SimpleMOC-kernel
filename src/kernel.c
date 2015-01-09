@@ -16,6 +16,9 @@ __global__ void run_kernel( Input I, Source * S,
 	int blockId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment	
 	int threadId = blockId * blockDim.x + threadIdx.x;
 
+	if( blockID >= I.segments )
+		return;
+
 	int g = threadIdx.x; // Each energy group (g) is one thread in a block
 
 	// Assign shared SIMD vectors

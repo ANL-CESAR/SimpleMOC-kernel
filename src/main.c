@@ -25,8 +25,13 @@ int main( int argc, char * argv[] )
 	cudaMemcpy(table_d, &table, sizeof(Table), cudaMemcpyHostToDevice);
 
 	// Setup CUDA blocks / threads
-	int block_size = 64;
-	int n_blocks = I.segments/block_size + (I.segments%block_size == 0 ? 0:1);
+	int n_blocks = sqrt(I.segments);
+	dim3 blocks(n_blocks, n_blocks);
+	if( blocks.x * blocks.y < I.segments )
+		blocks.x++;
+	if( blocks.x * blocks.y < I.segments )
+		blocks.y++;
+	assert( blocks.x * blocks.y >= I.segments )
 	
 	// Setup CUDA RNG on Device
 	curandState * RNG_states;
@@ -47,7 +52,7 @@ int main( int argc, char * argv[] )
 
 	// Run Simulation Kernel Loop
 	start = get_time();
-	run_kernel <<< n_blocks, block_size >>> (I, sources_d, SA_d, table_d, 
+	run_kernel <<< dim3(n_blocks, n_blocks), I.egroups >>> (I, sources_d, SA_d, table_d, 
 			RNG_states, flux_states, N_flux_states);
 	stop = get_time();
 

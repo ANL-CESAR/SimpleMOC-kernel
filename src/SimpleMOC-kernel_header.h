@@ -12,6 +12,7 @@
 #include<pthread.h>
 #include<unistd.h>
 #include<malloc.h>
+#include<assert.h>
 
 #include <cuda.h>
 #include <curand_kernel.h>
@@ -40,7 +41,6 @@ typedef struct{
 	float * sigT_arr;
 } Source_Arrays;
 
-
 // Table structure for computing exponential
 typedef struct{
 	float values[706];
@@ -48,24 +48,6 @@ typedef struct{
 	float maxVal;
 	int N;
 } Table;
-
-// Local SIMD Vector Arrays
-typedef struct{
-	float * q0;
-	float * q1;
-	float * q2;
-	float * sigT;
-	float * tau;
-	float * sigT2;
-	float * expVal;
-	float * reuse;
-	float * flux_integral;
-	float * tally;
-	float * t1;
-	float * t2;
-	float * t3;
-	float * t4;
-} SIMD_Vectors;
 
 // kernel.c
 __global__ void run_kernel( Input I, Source * S,
@@ -80,8 +62,6 @@ Source * initialize_sources( Input I, Source_Arrays * SA );
 Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays * SA_d, Source * sources_h );
 Table buildExponentialTable( void );
 Input set_default_input( void );
-SIMD_Vectors aligned_allocate_simd_vectors(Input I);
-SIMD_Vectors allocate_simd_vectors(Input I);
 double get_time(void);
 
 // io.c
