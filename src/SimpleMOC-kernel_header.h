@@ -16,6 +16,9 @@
 #include<malloc.h>
 #include<assert.h>
 
+#define CUDA_CALL(x) do { if((x) != cudaSuccess) { \
+    printf("Error at %s:%d\n",__FILE__,__LINE__); \
+    return EXIT_FAILURE;}} while(0)
 
 // User inputs
 typedef struct{
@@ -51,19 +54,18 @@ typedef struct{
 
 // kernel.c
 __global__ void run_kernel( Input I, Source * S,
-		Source_Arrays * SA, Table * table, curandState * state,
+		Source_Arrays SA, Table * table, curandState * state,
 		float * state_fluxes, int N_state_fluxes);
-__device__ void interpolateTable(Table table, float x, float * out);
+__device__ void interpolateTable(Table * table, float x, float * out);
 
 // init.c
 double mem_estimate( Input I );
-__global__ void setup_kernel(curandState *state);
+__global__ void setup_kernel(curandState *state, Input I);
 __global__ void	init_flux_states( float * flux_states, int N_flux_states, Input I, curandState * state);
 Source * initialize_sources( Input I, Source_Arrays * SA );
 Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays * SA_d, Source * sources_h );
 Table buildExponentialTable( void );
 Input set_default_input( void );
-double get_time(void);
 
 // io.c
 void logo(int version);

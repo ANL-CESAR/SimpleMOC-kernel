@@ -1,22 +1,29 @@
 #include "SimpleMOC-kernel_header.h"
 
-__global__ void setup_kernel(curandState *state)
+__global__ void setup_kernel(curandState *state, Input I)
 {
-	int id = blockIdx.x * blockDim.x + threadIdx.x
+	int blockId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment	
 	/* Each thread gets same seed, a different sequence 
 	 *        number, no offset */
-	curand_init(1234, id, 0, &state[id]);
+	if( blockId >= I.segments )
+		return;
+	if( threadIdx.x == 0 )
+		curand_init(1234, blockId, 0, &state[blockId]);
 }
 
 // Initialize global flux states to random numbers on device
+// Slow, poor use of GPU, but fine since it's just initialization code
 __global__ void	init_flux_states( float * flux_states, int N_flux_states, Input I, curandState * state)
 {
 	int blockId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment	
 	int threadId = blockId * blockDim.x + threadIdx.x; // energy group
 
-	curandState localState = state[threadId];
+	if(blockId >= N_flux_states)
+		return;
 
-	flux_states[threadID] = curand_uniform(&localState);
+	if( threadIdx.x == 0 )
+		for( int i = 0; i < I.egroups; i++ )
+			flux_states[threadId +i] = curand_uniform(&state[blockId]);
 }
 
 // Gets I from user and sets defaults
@@ -119,7 +126,7 @@ Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays
 
 	// Allocate & Copy SigT Data
 	long N_sigT = I.source_regions * I.egroups;
-	cudaMalloc((void **) &SA_d->sitT_arr, N_sigT * sizeof(float));
+	cudaMalloc((void **) &SA_d->sigT_arr, N_sigT * sizeof(float));
 	cudaMemcpy(SA_d->sigT_arr, SA_h->sigT_arr,
 			N_sigT * sizeof(float), cudaMemcpyHostToDevice);
 
@@ -127,7 +134,7 @@ Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays
 	Source * sources_d;
 	cudaMalloc((void **) &sources_d, I.source_regions * sizeof(Source));
 	cudaMemcpy(sources_d, sources_h, I.source_regions * sizeof(Source),
-			cuaMemcpyHostToDevice);
+			cudaMemcpyHostToDevice);
 
 	return sources_d;
 }
@@ -163,90 +170,4 @@ Table buildExponentialTable( void )
 	table.N = N;
 
 	return table;
-}
-
-#ifdef INTEL
-SIMD_Vectors aligned_allocate_simd_vectors(Input I)
-{
-	SIMD_Vectors A;
-	A.q0 = (float *) _mm_malloc(I.egroups * sizeof(float), 64);
-	A.q1 = (float *) _mm_malloc(I.egroups * sizeof(float), 64);
-	A.q2 = (float *) _mm_malloc(I.egroups * sizeof(float), 64);
-	A.sigT = (float *) _mm_malloc(I.egroups * sizeof(float), 64);
-	A.tau = (float *) _mm_malloc(I.egroups * sizeof(float), 64);
-	A.sigT2 =(float *) _mm_malloc(I.egroups * sizeof(float), 64);
-	A.expVal =(float *) _mm_malloc(I.egroups * sizeof(float), 64);
-	A.reuse = (float *) _mm_malloc(I.egroups * sizeof(float), 64);
-	A.flux_integral = (float *) _mm_malloc(I.egroups * sizeof(float), 64);
-	A.tally = (float *) _mm_malloc(I.egroups * sizeof(float), 64);
-	A.t1 = (float *) _mm_malloc(I.egroups * sizeof(float), 64);
-	A.t2 = (float *) _mm_malloc(I.egroups * sizeof(float), 64);
-	A.t3 = (float *) _mm_malloc(I.egroups * sizeof(float), 64);
-	A.t4 = (float *) _mm_malloc(I.egroups * sizeof(float), 64);
-	return A;
-}
-#endif
-
-SIMD_Vectors allocate_simd_vectors(Input I)
-{
-	SIMD_Vectors A;
-	float * ptr = (float * ) malloc( I.egroups * 14 * sizeof(float));
-	A.q0 = ptr;
-	ptr += I.egroups;
-	A.q1 = ptr;
-	ptr += I.egroups;
-	A.q2 = ptr;
-	ptr += I.egroups;
-	A.sigT = ptr;
-	ptr += I.egroups;
-	A.tau = ptr;
-	ptr += I.egroups;
-	A.sigT2 = ptr;
-	ptr += I.egroups;
-	A.expVal = ptr;
-	ptr += I.egroups;
-	A.reuse = ptr;
-	ptr += I.egroups;
-	A.flux_integral = ptr;
-	ptr += I.egroups;
-	A.tally = ptr;
-	ptr += I.egroups;
-	A.t1 = ptr;
-	ptr += I.egroups;
-	A.t2 = ptr;
-	ptr += I.egroups;
-	A.t3 = ptr;
-	ptr += I.egroups;
-	A.t4 = ptr;
-
-	return A;
-}
-
-#ifdef OPENMP
-// Intialized OpenMP Source Region Locks
-omp_lock_t * init_locks( Input I )
-{
-	// Allocate locks array
-	long n_locks = I.source_regions * I.course_axial_intervals; 
-	omp_lock_t * locks = (omp_lock_t *) malloc( n_locks* sizeof(omp_lock_t));
-
-	// Initialize locks array
-	for( long i = 0; i < n_locks; i++ )
-		omp_init_lock(&locks[i]);
-
-	return locks;
-}	
-#endif
-
-// Timer function. Depends on if compiled with MPI, openmp, or vanilla
-double get_time(void)
-{
-	#ifdef OPENMP
-	return omp_get_wtime();
-	#endif
-
-	time_t time;
-	time = clock();
-
-	return (double) time / (double) CLOCKS_PER_SEC;
 }

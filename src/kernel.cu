@@ -10,13 +10,12 @@
  */
 
 __global__ void run_kernel( Input I, Source * S,
-		Source_Arrays * SA, Table * table, curandState * state,
+		Source_Arrays SA, Table * table, curandState * state,
 		float * state_fluxes, int N_state_fluxes)
 {
 	int blockId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment	
-	int threadId = blockId * blockDim.x + threadIdx.x;
 
-	if( blockID >= I.segments )
+	if( blockId >= I.segments )
 		return;
 
 	int g = threadIdx.x; // Each energy group (g) is one thread in a block
@@ -40,7 +39,7 @@ __global__ void run_kernel( Input I, Source * S,
 	float * t4 =            s; s+= I.egroups;
 
 	// Assign RNG state
-	curandState * localState = &state[blockId];
+	curandState * localState = &state[blockId*I.egroups];
 
 	// Randomized variables (common accross all thread within block)
 	__shared__ int state_flux_id;
@@ -51,18 +50,18 @@ __global__ void run_kernel( Input I, Source * S,
 	// (We are not concerned with coherency here as in actual
 	// program threads would be organized in a more specific order)
 	if( threadIdx.x == 0 )
-		state_flux_id = curand(&localState) * N_state_fluxes;
+		state_flux_id = curand(localState) * N_state_fluxes;
 
 	__syncthreads();
 	float * state_flux = &state_fluxes[state_flux_id];
 
 	// Pick Random QSR
 	if( threadIdx.x == 0 )
-		QSR_id = curand(&localState) * I.source_regions;
+		QSR_id = curand(localState) * I.source_regions;
 
 	// Pick Random Fine Axial Interval
 	if( threadIdx.x == 0 )
-		FAI_id = curand(&localState) * I.fine_axial_intervals;
+		FAI_id = curand(localState) * I.fine_axial_intervals;
 
 	__syncthreads();
 
@@ -187,17 +186,17 @@ __global__ void run_kernel( Input I, Source * S,
 
 /* Interpolates a formed exponential table to compute ( 1- exp(-x) )
  *  at the desired x value */
-__device__ void interpolateTable(Table table, float x, float * out)
+__device__ void interpolateTable(Table * table, float x, float * out)
 {
 	// check to ensure value is in domain
-	if( x > table.maxVal )
+	if( x > table->maxVal )
 		*out = 1.0f;
 	else
 	{
-		int interval = (int) ( x / table.dx + 0.5f * table.dx );
+		int interval = (int) ( x / table->dx + 0.5f * table->dx );
 		interval = interval * 2;
-		float slope = table.values[ interval ];
-		float intercept = table.values[ interval + 1 ];
+		float slope = table->values[ interval ];
+		float intercept = table->values[ interval + 1 ];
 		float val = slope * x + intercept;
 		*out = val;
 	}

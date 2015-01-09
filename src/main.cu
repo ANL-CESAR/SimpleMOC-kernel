@@ -36,25 +36,35 @@ int main( int argc, char * argv[] )
 	// Setup CUDA RNG on Device
 	curandState * RNG_states;
 	cudaMalloc((void **)&RNG_states, I.segments * sizeof(curandState));
-	setup_kernel<<<blocks, I.egroups>>>(RNG_states);
+	setup_kernel<<<blocks, I.egroups>>>(RNG_states, I);
 
 	// Allocate Some Flux State vectors to randomly pick from
 	float * flux_states;
-	int N_flux_states = 1000000;
+	int N_flux_states = 1000;
+	assert( I.segments >= N_flux_states );
 	cudaMalloc((void **) &flux_states, 1000000 * I.egroups * sizeof(float));
 	init_flux_states<<< blocks, I.egroups >>> ( flux_states, N_flux_states, I, RNG_states );
 
 	center_print("SIMULATION", 79);
 	border_print();
 	printf("Attentuating fluxes across segments...\n");
+	cudaDeviceSynchronize();
+	printf("HELLLOOOOO!!!\n");
 
-	double start, stop;
+	// CUDA timer variables
+	cudaEvent_t start, stop;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	float time;
 
 	// Run Simulation Kernel Loop
-	start = get_time();
-	run_kernel <<< blocks, I.egroups >>> (I, sources_d, &SA_d, table_d, 
+	cudaEventRecord(start);
+	run_kernel <<< blocks, I.egroups >>> (I, sources_d, SA_d, table_d, 
 			RNG_states, flux_states, N_flux_states);
-	stop = get_time();
+	cudaEventRecord(stop);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&time, start, stop);
+	cudaDeviceSynchronize();
 
 	printf("Simulation Complete.\n");
 
@@ -62,9 +72,9 @@ int main( int argc, char * argv[] )
 	center_print("RESULTS SUMMARY", 79);
 	border_print();
 
-	double tpi = ((double) (stop - start) /
+	double tpi = ((double) (time/1000.0) /
 			(double)I.segments / (double) I.egroups) * 1.0e9;
-	printf("%-25s%.3lf seconds\n", "Runtime:", stop-start);
+	printf("%-25s%.3lf seconds\n", "Runtime:", time / 1000.0);
 	printf("%-25s%.3lf ns\n", "Time per Intersection:", tpi);
 	border_print();
 
