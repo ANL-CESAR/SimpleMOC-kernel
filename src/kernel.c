@@ -1,43 +1,69 @@
 #include "SimpleMOC-kernel_header.h"
 
-void run_kernel( Input I, Source * S, Source_Arrays SA, Table table)
+/* My parallelization scheme here is to basically have a single
+ * block be a geometrical segment, with each thread within the
+ * block represent a single energy phase. On the CPU, the
+ * inner SIMD-ized loop is over energy (i.e, 100 energy groups).
+ * This should allow for each BLOCK to have:
+ * 		- A single state variable for the RNG
+ * 		- A set of __shared__ SIMD vectors, each thread id being its idx
+ */
+
+__global__ void run_kernel( Input I, Source * S,
+		Source_Arrays * SA, Table * table, curandState * state,
+		float * state_fluxes, int N_state_fluxes)
 {
-	// Enter Parallel Region
-	#pragma omp parallel default(none) shared(I, S, table, SA)
-	{
-		#ifdef OPENMP
-		int thread = omp_get_thread_num();
-		#else
-		int thread = 0;
-		#endif
+	int blockId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment	
+	int threadId = blockId * blockDim.x + threadIdx.x; // energy group
 
-		// Create Thread Local Random Seed
-		unsigned int seed = time(NULL) * (thread+1);
+	// Assign shared SIMD vectors
+	extern __shared__ float simd_shared_vecs[];
+	float * s = simd_shared_vecs;
+	float * q0 =            s; s+= I.egroups;
+	float * q1 =            s; s+= I.egroups;
+	float * q2 =            s; s+= I.egroups;
+	float * sigT =          s; s+= I.egroups;
+	float * tau =           s; s+= I.egroups;
+	float * sigT2 =         s; s+= I.egroups;
+	float * expVal =        s; s+= I.egroups;
+	float * reuse =         s; s+= I.egroups;
+	float * flux_integral = s; s+= I.egroups;
+	float * tally =         s; s+= I.egroups;
+	float * t1 =            s; s+= I.egroups;
+	float * t2 =            s; s+= I.egroups;
+	float * t3 =            s; s+= I.egroups;
+	float * t4 =            s; s+= I.egroups;
 
-		// Allocate Thread Local SIMD Vectors (align if using intel compiler)
-		SIMD_Vectors simd_vecs = allocate_simd_vectors(I);
-		float * state_flux = (float *) malloc(
-				I.egroups * sizeof(float));
+	// Assign RNG state
+	curandState * localState = &state[blockId];
+	
+	// Randomized variables (common accross all thread within block)
+	__shared__ int state_flux_id;
+	__shared__ int QSR_id;
+	__shared__ int FAI_id;
 
-		// Allocate Thread Local Flux Vector
-		for( int i = 0; i < I.egroups; i++ )
-			state_flux[i] = rand_r(&seed) / RAND_MAX;
+	// Find State Flux Vector in global memory
+	// (We are not concerned with coherency here as in actual
+	// program threads would be organized in a more specific order)
+	if( threadIdx.x == 0 )
+		state_flux_id = curand(&localState) * N_state_fluxes;
 
-		// Enter OMP For Loop over Segments
-		#pragma omp for schedule(dynamic,100)
-		for( long i = 0; i < I.segments; i++ )
-		{
-			// Pick Random QSR
-			int QSR_id = rand_r(&seed) % I.source_regions;
+	__syncthreads();
+	float * state_flux = &state_fluxes[state_flux_id];
 
-			// Pick Random Fine Axial Interval
-			int FAI_id = rand_r(&seed) % I.fine_axial_intervals;
+	// Pick Random QSR
+	if( threadIdx.x == 0 )
+		QSR_id = curand(&localState) * I.source_regions;
 
-			// Attenuate Segment
-			attenuate_segment( I, S, SA, QSR_id, FAI_id, state_flux,
-					&simd_vecs, table);
-		}
-	}
+	// Pick Random Fine Axial Interval
+	if( threadIdx.x == 0 )
+		FAI_id = curand(&localState) * I.fine_axial_intervals;
+
+	__syncthreads();
+
+	// Attenuate Segment
+	attenuate_segment( I, S, SA, QSR_id, FAI_id, state_flux,
+			&simd_vecs, table);
 }
 
 void attenuate_segment( Input I, Source * restrict S, Source_Arrays SA,

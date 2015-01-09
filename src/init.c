@@ -1,5 +1,24 @@
 #include "SimpleMOC-kernel_header.h"
 
+__global__ void setup_kernel(curandState *state)
+{
+	int id = blockIdx.x * blockDim.x + threadIdx.x
+	/* Each thread gets same seed, a different sequence 
+	 *        number, no offset */
+	curand_init(1234, id, 0, &state[id]);
+}
+
+// Initialize global flux states to random numbers on device
+__global__ void	init_flux_states( float * flux_states, int N_flux_states, Input I, curandState * state)
+{
+	int blockId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment	
+	int threadId = blockId * blockDim.x + threadIdx.x; // energy group
+
+	curandState localState = state[threadId];
+
+	flux_states[threadID] = curand_uniform(&localState);
+}
+
 // Gets I from user and sets defaults
 Input set_default_input( void )
 {
@@ -10,10 +29,6 @@ Input set_default_input( void )
 	I.fine_axial_intervals = 5;
 	I.segments = 50000000;
 	I.egroups = 100;
-
-	#ifdef OPENMP
-	I.nthreads = omp_get_max_threads();
-	#endif
 
 	return I;
 }
@@ -50,7 +65,7 @@ Source * initialize_sources( Input I, Source_Arrays * SA )
 {
 	// Source Data Structure Allocation
 	Source * sources = (Source *) malloc( I.source_regions * sizeof(Source));
-	
+
 	// Allocate Fine Source Data
 	long N_fine = I.source_regions * I.fine_axial_intervals * I.egroups;
 	SA->fine_source_arr = (float *) malloc( N_fine * sizeof(float));
@@ -74,7 +89,7 @@ Source * initialize_sources( Input I, Source_Arrays * SA )
 	for( int i = 0; i < I.source_regions; i++)
 		sources[i].locks_id = i * I.course_axial_intervals;
 	#endif
-	
+
 	// Initialize fine source and flux to random numbers
 	for( long i = 0; i < N_fine; i++ )
 	{
@@ -96,12 +111,12 @@ Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays
 	cudaMalloc((void **) &SA_d->fine_source_arr, N_fine * sizeof(float));
 	cudaMemcpy(SA_d->fine_source_arr, SA_h->fine_source_arr,
 			N_fine * sizeof(float), cudaMemcpyHostToDevice);
-	
+
 	// Allocate & Copy Fine Flux Data
 	cudaMalloc((void **) &SA_d->fine_flux_arr, N_fine * sizeof(float));
 	cudaMemcpy(SA_d->fine_flux_arr, SA_h->fine_flux_arr,
 			N_fine * sizeof(float), cudaMemcpyHostToDevice);
-	
+
 	// Allocate & Copy SigT Data
 	long N_sigT = I.source_regions * I.egroups;
 	cudaMalloc((void **) &SA_d->sitT_arr, N_sigT * sizeof(float));
@@ -113,7 +128,7 @@ Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays
 	cudaMalloc((void **) &sources_d, I.source_regions * sizeof(Source));
 	cudaMemcpy(sources_d, sources_h, I.source_regions * sizeof(Source),
 			cuaMemcpyHostToDevice);
-	
+
 	return sources_d;
 }
 
@@ -226,12 +241,12 @@ omp_lock_t * init_locks( Input I )
 // Timer function. Depends on if compiled with MPI, openmp, or vanilla
 double get_time(void)
 {
-    #ifdef OPENMP
-    return omp_get_wtime();
-    #endif
+	#ifdef OPENMP
+	return omp_get_wtime();
+	#endif
 
-    time_t time;
-    time = clock();
+	time_t time;
+	time = clock();
 
-    return (double) time / (double) CLOCKS_PER_SEC;
+	return (double) time / (double) CLOCKS_PER_SEC;
 }

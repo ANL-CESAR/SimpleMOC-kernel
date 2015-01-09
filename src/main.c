@@ -24,6 +24,21 @@ int main( int argc, char * argv[] )
 	cudaMalloc((void **) &table_d, sizeof(Table));
 	cudaMemcpy(table_d, &table, sizeof(Table), cudaMemcpyHostToDevice);
 
+	// Setup CUDA blocks / threads
+	int block_size = 64;
+	int n_blocks = I.segments/block_size + (I.segments%block_size == 0 ? 0:1);
+	
+	// Setup CUDA RNG on Device
+	curandState * RNG_states;
+	cudaMalloc((void **)&RNG_states, block_size*n_blocks * sizeof(curandState));
+	setup_kernel<<<n_blocks, block_size>>>(RNG_states);
+
+	// Allocate Some Flux State vectors to randomly pick from
+	float * flux_states;
+	int N_flux_states = 1000000;
+	cudaMalloc((void **) &flux_states, 1000000 * I.egroups * sizeof(float));
+	init_flux_states<< dim3(n_blocks,n_blocks), I.egroups >> ( flux_states, N_flux_states, I );
+
 	center_print("SIMULATION", 79);
 	border_print();
 	printf("Attentuating fluxes across segments...\n");
@@ -32,9 +47,8 @@ int main( int argc, char * argv[] )
 
 	// Run Simulation Kernel Loop
 	start = get_time();
-	int block_size = 32;
-	int n_blocks = I.segments/block_size + (I.segments%block_size == 0 ? 0:1);
-	square_array <<< n_blocks, block_size >>> (I, sources_d, SA_d, table_d);
+	run_kernel <<< n_blocks, block_size >>> (I, sources_d, SA_d, table_d, 
+			RNG_states, flux_states, N_flux_states);
 	stop = get_time();
 
 	printf("Simulation Complete.\n");

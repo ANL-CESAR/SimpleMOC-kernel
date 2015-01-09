@@ -14,6 +14,7 @@
 #include<malloc.h>
 
 #include <cuda.h>
+#include <curand_kernel.h>
 
 // User inputs
 typedef struct{
@@ -30,9 +31,6 @@ typedef struct{
 	long fine_flux_id;
 	long fine_source_id;
 	long sigT_id;
-	#ifdef OPENMP
-	long locks_id;
-	#endif
 } Source;
 
 // Source Arrays
@@ -40,9 +38,6 @@ typedef struct{
 	float * fine_flux_arr;
 	float * fine_source_arr;
 	float * sigT_arr;
-	#ifdef OPENMP
-	omp_lock_t * locks_arr;
-	#endif
 } Source_Arrays;
 
 
@@ -81,6 +76,7 @@ float interpolateTable( Table table, float x);
 
 // init.c
 double mem_estimate( Input I );
+__global__ void setup_kernel(curandState *state);
 Source * initialize_sources( Input I, Source_Arrays * SA );
 Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays * SA_d, Source * sources_h );
 Table buildExponentialTable( void );
