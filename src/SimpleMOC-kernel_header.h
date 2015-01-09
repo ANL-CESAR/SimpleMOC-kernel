@@ -68,11 +68,10 @@ typedef struct{
 } SIMD_Vectors;
 
 // kernel.c
-void run_kernel( Input I, Source * S, Source_Arrays SA, Table table);
-void attenuate_segment( Input I, Source * restrict S, Source_Arrays SA,
-		int QSR_id, int FAI_id, float * restrict state_flux,
-		SIMD_Vectors * restrict simd_vecs, Table table); 
-float interpolateTable( Table table, float x);
+__global__ void run_kernel( Input I, Source * S,
+		Source_Arrays * SA, Table * table, curandState * state,
+		float * state_fluxes, int N_state_fluxes)
+__device__ void interpolateTable(Table table, float x, float * out)
 
 // init.c
 double mem_estimate( Input I );

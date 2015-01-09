@@ -14,7 +14,9 @@ __global__ void run_kernel( Input I, Source * S,
 		float * state_fluxes, int N_state_fluxes)
 {
 	int blockId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment	
-	int threadId = blockId * blockDim.x + threadIdx.x; // energy group
+	int threadId = blockId * blockDim.x + threadIdx.x;
+
+	int g = threadIdx.x; // Each energy group (g) is one thread in a block
 
 	// Assign shared SIMD vectors
 	extern __shared__ float simd_shared_vecs[];
@@ -36,7 +38,7 @@ __global__ void run_kernel( Input I, Source * S,
 
 	// Assign RNG state
 	curandState * localState = &state[blockId];
-	
+
 	// Randomized variables (common accross all thread within block)
 	__shared__ int state_flux_id;
 	__shared__ int QSR_id;
@@ -61,30 +63,9 @@ __global__ void run_kernel( Input I, Source * S,
 
 	__syncthreads();
 
+	//////////////////////////////////////////////////////////
 	// Attenuate Segment
-	attenuate_segment( I, S, SA, QSR_id, FAI_id, state_flux,
-			&simd_vecs, table);
-}
-
-void attenuate_segment( Input I, Source * restrict S, Source_Arrays SA,
-		int QSR_id, int FAI_id, float * restrict state_flux,
-		SIMD_Vectors * restrict simd_vecs, Table table) 
-{
-	// Unload local vector vectors
-	float * restrict q0 =            simd_vecs->q0;
-	float * restrict q1 =            simd_vecs->q1;
-	float * restrict q2 =            simd_vecs->q2;
-	float * restrict sigT =          simd_vecs->sigT;
-	float * restrict tau =           simd_vecs->tau;
-	float * restrict sigT2 =         simd_vecs->sigT2;
-	float * restrict expVal =        simd_vecs->expVal;
-	float * restrict reuse =         simd_vecs->reuse;
-	float * restrict flux_integral = simd_vecs->flux_integral;
-	float * restrict tally =         simd_vecs->tally;
-	float * restrict t1 =            simd_vecs->t1;
-	float * restrict t2 =            simd_vecs->t2;
-	float * restrict t3 =            simd_vecs->t3;
-	float * restrict t4 =            simd_vecs->t4;
+	//////////////////////////////////////////////////////////
 
 	// Some placeholder constants - In the full app some of these are
 	// calculated based off position in geometry. This treatment
@@ -107,42 +88,36 @@ void attenuate_segment( Input I, Source * restrict S, Source_Arrays SA,
 		float * f2 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
 		float * f3 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
 		// cycle over energy groups
-		for( int g = 0; g < egroups; g++)
-		{
-			// load neighboring sources
-			float y2 = f2[g];
-			float y3 = f3[g];
+		// load neighboring sources
+		float y2 = f2[g];
+		float y3 = f3[g];
 
-			// do linear "fitting"
-			float c0 = y2;
-			float c1 = (y3 - y2) / dz;
+		// do linear "fitting"
+		float c0 = y2;
+		float c1 = (y3 - y2) / dz;
 
-			// calculate q0, q1, q2
-			q0[g] = c0 + c1*zin;
-			q1[g] = c1;
-			q2[g] = 0;
-		}
+		// calculate q0, q1, q2
+		q0[g] = c0 + c1*zin;
+		q1[g] = c1;
+		q2[g] = 0;
 	}
 	else if ( FAI_id == I.fine_axial_intervals - 1 )
 	{
 		float * f1 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
 		float * f2 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
 		// cycle over energy groups
-		for( int g = 0; g < egroups; g++)
-		{
-			// load neighboring sources
-			float y1 = f1[g];
-			float y2 = f2[g];
+		// load neighboring sources
+		float y1 = f1[g];
+		float y2 = f2[g];
 
-			// do linear "fitting"
-			float c0 = y2;
-			float c1 = (y2 - y1) / dz;
+		// do linear "fitting"
+		float c0 = y2;
+		float c1 = (y2 - y1) / dz;
 
-			// calculate q0, q1, q2
-			q0[g] = c0 + c1*zin;
-			q1[g] = c1;
-			q2[g] = 0;
-		}
+		// calculate q0, q1, q2
+		q0[g] = c0 + c1*zin;
+		q1[g] = c1;
+		q2[g] = 0;
 	}
 	else
 	{
@@ -150,113 +125,70 @@ void attenuate_segment( Input I, Source * restrict S, Source_Arrays SA,
 		float * f2 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
 		float * f3 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
 		// cycle over energy groups
-		for( int g = 0; g < egroups; g++)
-		{
-			// load neighboring sources
-			float y1 = f1[g]; 
-			float y2 = f2[g];
-			float y3 = f3[g];
+		// load neighboring sources
+		float y1 = f1[g]; 
+		float y2 = f2[g];
+		float y3 = f3[g];
 
-			// do quadratic "fitting"
-			float c0 = y2;
-			float c1 = (y1 - y3) / (2.f*dz);
-			float c2 = (y1 - 2.f*y2 + y3) / (2.f*dz*dz);
+		// do quadratic "fitting"
+		float c0 = y2;
+		float c1 = (y1 - y3) / (2.f*dz);
+		float c2 = (y1 - 2.f*y2 + y3) / (2.f*dz*dz);
 
-			// calculate q0, q1, q2
-			q0[g] = c0 + c1*zin + c2*zin*zin;
-			q1[g] = c1 + 2.f*c2*zin;
-			q2[g] = c2;
-		}
+		// calculate q0, q1, q2
+		q0[g] = c0 + c1*zin + c2*zin*zin;
+		q1[g] = c1 + 2.f*c2*zin;
+		q2[g] = c2;
 	}
 
 
-	// cycle over energy groups
-	for( int g = 0; g < egroups; g++)
-	{
-		// load total cross section
-		sigT[g] = SA.sigT_arr[ S[QSR_id].sigT_id + g];
+	// load total cross section
+	sigT[g] = SA.sigT_arr[ S[QSR_id].sigT_id + g];
 
-		// calculate common values for efficiency
-		tau[g] = sigT[g] * ds;
-		sigT2[g] = sigT[g] * sigT[g];
-	}
+	// calculate common values for efficiency
+	tau[g] = sigT[g] * ds;
+	sigT2[g] = sigT[g] * sigT[g];
 
-	// cycle over energy groups
-	for( int g = 0; g < egroups; g++)
-		expVal[g] = interpolateTable( table, tau[g] );  
+	interpolateTable( table, tau[g], &expVal[g] );  
 
 	// Flux Integral
 
 	// Re-used Term
-	for( int g = 0; g < egroups; g++)
-	{
-		reuse[g] = tau[g] * (tau[g] - 2.f) + 2.f * expVal[g] 
-			/ (sigT[g] * sigT2[g]); 
-	}
+	reuse[g] = tau[g] * (tau[g] - 2.f) + 2.f * expVal[g] 
+		/ (sigT[g] * sigT2[g]); 
 
-	//#pragma vector alignednontemporal
-	for( int g = 0; g < egroups; g++)
-	{
-		// add contribution to new source flux
-		flux_integral[g] = (q0[g] * tau[g] + (sigT[g] * state_flux[g] - q0[g])
-				* expVal[g]) / sigT2[g] + q1[g] * mu * reuse[g] + q2[g] * mu2 
-			* (tau[g] * (tau[g] * (tau[g] - 3.f) + 6.f) - 6.f * expVal[g]) 
-			/ (3.f * sigT2[g] * sigT2[g]);
-	}
+	// add contribution to new source flux
+	flux_integral[g] = (q0[g] * tau[g] + (sigT[g] * state_flux[g] - q0[g])
+			* expVal[g]) / sigT2[g] + q1[g] * mu * reuse[g] + q2[g] * mu2 
+		* (tau[g] * (tau[g] * (tau[g] - 3.f) + 6.f) - 6.f * expVal[g]) 
+		/ (3.f * sigT2[g] * sigT2[g]);
 
-	for( int g = 0; g < egroups; g++)
-	{
-		// Prepare tally
-		tally[g] = weight * flux_integral[g];
-	}
+	// Prepare tally
+	tally[g] = weight * flux_integral[g];
 
-	#ifdef OPENMP
-	omp_set_lock(&SA.locks_arr[ S[QSR_id].locks_id + FAI_id]);
-	#endif
-
-	for( int g = 0; g < egroups; g++)
-	{
-		FSR_flux[g] += tally[g];
-	}
-
-	#ifdef OPENMP
-	omp_unset_lock(&SA.locks_arr[ S[QSR_id].locks_id + FAI_id]);
-	#endif
+	// SHOULD BE ATOMIC HERE!
+	//FSR_flux[g] += tally[g];
+	atomicAdd(&FSR_flux[g], (float) tally[g]);
 
 	// Term 1
-	for( int g = 0; g < egroups; g++)
-	{
-		t1[g] = q0[g] * expVal[g] / sigT[g];  
-	}
+	t1[g] = q0[g] * expVal[g] / sigT[g];  
 	// Term 2
-	for( int g = 0; g < egroups; g++)
-	{
-		t2[g] = q1[g] * mu * (tau[g] - expVal[g]) / sigT2[g]; 
-	}
+	t2[g] = q1[g] * mu * (tau[g] - expVal[g]) / sigT2[g]; 
 	// Term 3
-	for( int g = 0; g < egroups; g++)
-	{
-		t3[g] =	q2[g] * mu2 * reuse[g];
-	}
+	t3[g] =	q2[g] * mu2 * reuse[g];
 	// Term 4
-	for( int g = 0; g < egroups; g++)
-	{
-		t4[g] = state_flux[g] * (1.f - expVal[g]);
-	}
+	t4[g] = state_flux[g] * (1.f - expVal[g]);
 	// Total psi
-	for( int g = 0; g < egroups; g++)
-	{
-		state_flux[g] = t1[g] + t2[g] + t3[g] + t4[g];
-	}
+	state_flux[g] = t1[g] + t2[g] + t3[g] + t4[g];
 }	
 
 /* Interpolates a formed exponential table to compute ( 1- exp(-x) )
  *  at the desired x value */
-float interpolateTable( Table  table, float x)
+__device__ void interpolateTable(Table table, float x, float * out)
 {
 	// check to ensure value is in domain
 	if( x > table.maxVal )
-		return 1.0f;
+		*out = 1.0f;
 	else
 	{
 		int interval = (int) ( x / table.dx + 0.5f * table.dx );
@@ -264,6 +196,6 @@ float interpolateTable( Table  table, float x)
 		float slope = table.values[ interval ];
 		float intercept = table.values[ interval + 1 ];
 		float val = slope * x + intercept;
-		return val;
+		*out = val;
 	}
 }
