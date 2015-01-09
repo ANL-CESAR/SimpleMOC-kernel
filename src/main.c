@@ -11,18 +11,18 @@ int main( int argc, char * argv[] )
 
 	logo(version);
 
-	#ifdef OPENMP
-	omp_set_num_threads(I.nthreads); 
-	#endif
-
 	print_input_summary(I);
 
 	// Build Source Data
-	Source_Arrays SA;
-	Source * S = initialize_sources(I, &SA); 
+	Source_Arrays SA_h, SA_d;
+	Source * sources_h = initialize_sources(I, &SA_h); 
+	Source * sources_d = initialize_device_sources( I, SA_h, SA_d, sources_h); 
 	
 	// Build Exponential Table
 	Table table = buildExponentialTable();
+	Table * table_d;
+	cudaMalloc((void **) &table_d, sizeof(Table));
+	cudaMemcpy(table_d, &table, sizeof(Table), cudaMemcpyHostToDevice);
 
 	center_print("SIMULATION", 79);
 	border_print();

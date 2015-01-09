@@ -11,10 +11,6 @@ Input set_default_input( void )
 	I.segments = 50000000;
 	I.egroups = 100;
 
-	#ifdef PAPI
-	I.papi_event_set = 0;
-	#endif
-
 	#ifdef OPENMP
 	I.nthreads = omp_get_max_threads();
 	#endif
@@ -91,6 +87,34 @@ Source * initialize_sources( Input I, Source_Arrays * SA )
 		SA->sigT_arr[i] = rand() / RAND_MAX;
 
 	return sources;
+}
+
+Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays * SA_d, Source * sources_h )
+{
+	// Allocate & Copy Fine Source Data
+	long N_fine = I.source_regions * I.fine_axial_intervals * I.egroups;
+	cudaMalloc((void **) &SA_d->fine_source_arr, N_fine * sizeof(float));
+	cudaMemcpy(SA_d->fine_source_arr, SA_h->fine_source_arr,
+			N_fine * sizeof(float), cudaMemcpyHostToDevice);
+	
+	// Allocate & Copy Fine Flux Data
+	cudaMalloc((void **) &SA_d->fine_flux_arr, N_fine * sizeof(float));
+	cudaMemcpy(SA_d->fine_flux_arr, SA_h->fine_flux_arr,
+			N_fine * sizeof(float), cudaMemcpyHostToDevice);
+	
+	// Allocate & Copy SigT Data
+	long N_sigT = I.source_regions * I.egroups;
+	cudaMalloc((void **) &SA_d->sitT_arr, N_sigT * sizeof(float));
+	cudaMemcpy(SA_d->sigT_arr, SA_h->sigT_arr,
+			N_sigT * sizeof(float), cudaMemcpyHostToDevice);
+
+	// Allocate & Copy Source Array Data
+	Source * sources_d;
+	cudaMalloc((void **) &sources_d, I.source_regions * sizeof(Source));
+	cudaMemcpy(sources_d, sources_h, I.source_regions * sizeof(Source),
+			cuaMemcpyHostToDevice);
+	
+	return sources_d;
 }
 
 // Builds a table of exponential values for linear interpolation

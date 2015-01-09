@@ -13,9 +13,7 @@
 #include<unistd.h>
 #include<malloc.h>
 
-#ifdef OPENMP
-#include<omp.h>
-#endif
+#include <cuda.h>
 
 // User inputs
 typedef struct{
@@ -84,14 +82,12 @@ float interpolateTable( Table table, float x);
 // init.c
 double mem_estimate( Input I );
 Source * initialize_sources( Input I, Source_Arrays * SA );
+Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays * SA_d, Source * sources_h );
 Table buildExponentialTable( void );
 Input set_default_input( void );
 SIMD_Vectors aligned_allocate_simd_vectors(Input I);
 SIMD_Vectors allocate_simd_vectors(Input I);
 double get_time(void);
-#ifdef OPENMP
-omp_lock_t * init_locks( Input I );
-#endif
 
 // io.c
 void logo(int version);
