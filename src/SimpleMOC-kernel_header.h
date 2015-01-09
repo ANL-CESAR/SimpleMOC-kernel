@@ -58,6 +58,7 @@ __device__ void interpolateTable(Table table, float x, float * out);
 // init.c
 double mem_estimate( Input I );
 __global__ void setup_kernel(curandState *state);
+__global__ void	init_flux_states( float * flux_states, int N_flux_states, Input I, curandState * state);
 Source * initialize_sources( Input I, Source_Arrays * SA );
 Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays * SA_d, Source * sources_h );
 Table buildExponentialTable( void );

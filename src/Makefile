@@ -59,7 +59,7 @@ endif
 $(program): $(obj) SimpleMOC-kernel_header.h
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.c
+%.o: %.cu
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

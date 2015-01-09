@@ -16,7 +16,7 @@ int main( int argc, char * argv[] )
 	// Build Source Data
 	Source_Arrays SA_h, SA_d;
 	Source * sources_h = initialize_sources(I, &SA_h); 
-	Source * sources_d = initialize_device_sources( I, SA_h, SA_d, sources_h); 
+	Source * sources_d = initialize_device_sources( I, &SA_h, &SA_d, sources_h); 
 	
 	// Build Exponential Table
 	Table table = buildExponentialTable();
@@ -31,18 +31,18 @@ int main( int argc, char * argv[] )
 		blocks.x++;
 	if( blocks.x * blocks.y < I.segments )
 		blocks.y++;
-	assert( blocks.x * blocks.y >= I.segments )
+	assert( blocks.x * blocks.y >= I.segments );
 	
 	// Setup CUDA RNG on Device
 	curandState * RNG_states;
-	cudaMalloc((void **)&RNG_states, block_size*n_blocks * sizeof(curandState));
-	setup_kernel<<<n_blocks, block_size>>>(RNG_states);
+	cudaMalloc((void **)&RNG_states, I.segments * sizeof(curandState));
+	setup_kernel<<<blocks, I.egroups>>>(RNG_states);
 
 	// Allocate Some Flux State vectors to randomly pick from
 	float * flux_states;
 	int N_flux_states = 1000000;
 	cudaMalloc((void **) &flux_states, 1000000 * I.egroups * sizeof(float));
-	init_flux_states<< dim3(n_blocks,n_blocks), I.egroups >> ( flux_states, N_flux_states, I );
+	init_flux_states<<< blocks, I.egroups >>> ( flux_states, N_flux_states, I, RNG_states );
 
 	center_print("SIMULATION", 79);
 	border_print();
@@ -52,7 +52,7 @@ int main( int argc, char * argv[] )
 
 	// Run Simulation Kernel Loop
 	start = get_time();
-	run_kernel <<< dim3(n_blocks, n_blocks), I.egroups >>> (I, sources_d, SA_d, table_d, 
+	run_kernel <<< blocks, I.egroups >>> (I, sources_d, &SA_d, table_d, 
 			RNG_states, flux_states, N_flux_states);
 	stop = get_time();
 
