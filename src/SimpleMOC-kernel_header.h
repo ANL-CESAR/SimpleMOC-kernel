@@ -1,6 +1,8 @@
 #ifndef __SimpleMOC_header
 #define __SimpleMOC_header
 
+#include <curand_kernel.h>
+#include <cuda.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include<math.h>
@@ -14,8 +16,6 @@
 #include<malloc.h>
 #include<assert.h>
 
-#include <cuda.h>
-#include <curand_kernel.h>
 
 // User inputs
 typedef struct{
@@ -52,8 +52,8 @@ typedef struct{
 // kernel.c
 __global__ void run_kernel( Input I, Source * S,
 		Source_Arrays * SA, Table * table, curandState * state,
-		float * state_fluxes, int N_state_fluxes)
-__device__ void interpolateTable(Table table, float x, float * out)
+		float * state_fluxes, int N_state_fluxes);
+__device__ void interpolateTable(Table table, float x, float * out);
 
 // init.c
 double mem_estimate( Input I );
