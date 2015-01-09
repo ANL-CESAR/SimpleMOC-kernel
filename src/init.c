@@ -22,6 +22,34 @@ Input set_default_input( void )
 	return I;
 }
 
+// Returns a memory esimate (in MB) for the program's primary data structures
+double mem_estimate( Input I )
+{
+	size_t nbytes = 0;
+
+	// Sources Array
+	nbytes += I.source_regions * sizeof(Source);
+
+	// Fine Source Data
+	long N_fine = I.source_regions * I.fine_axial_intervals * I.egroups;
+	nbytes += N_fine * sizeof(float);
+
+	// Fine Flux Data
+	nbytes += N_fine * sizeof(float);
+
+	// SigT Data
+	long N_sigT = I.source_regions * I.egroups;
+	nbytes += N_sigT * sizeof(float);
+
+	// OpenMP Locks
+	#ifdef OPENMP
+	nbytes += I.source_regions * I.course_axial_intervals * sizeof(omp_lock_t);
+	#endif
+
+	// Return MB
+	return (double) nbytes / 1024.0 / 1024.0;
+}
+
 Source * initialize_sources( Input I, Source_Arrays * SA )
 {
 	// Source Data Structure Allocation

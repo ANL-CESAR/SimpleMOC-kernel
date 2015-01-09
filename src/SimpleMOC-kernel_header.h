@@ -82,6 +82,7 @@ void attenuate_segment( Input I, Source * restrict S, Source_Arrays SA,
 float interpolateTable( Table table, float x);
 
 // init.c
+double mem_estimate( Input I );
 Source * initialize_sources( Input I, Source_Arrays * SA );
 Table buildExponentialTable( void );
 Input set_default_input( void );

@@ -80,6 +80,7 @@ void print_input_summary(Input I)
 	printf("%-25s%d\n", "Course Axial Intervals:", I.course_axial_intervals);
 	printf("%-25s%d\n", "Fine Axial Intervals:", I.fine_axial_intervals);
 	printf("%-25s", "Segments:"); fancy_int(I.segments);
+	printf("%-25s%.2lf\n", "Est. Memory Usage:", mem_estimate(I)); 
 	#ifdef PAPI
     if( I.papi_event_set == -1)
         printf("%-25s%s\n", "PAPI event to count:", I.event_name);
