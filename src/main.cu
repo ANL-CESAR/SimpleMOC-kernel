@@ -12,17 +12,23 @@ int main( int argc, char * argv[] )
 	logo(version);
 
 	print_input_summary(I);
+	
+	center_print("INITIALIZATION", 79);
+	border_print();
 
+	printf("Building Source Data Arrays...\n");
 	// Build Source Data
 	Source_Arrays SA_h, SA_d;
 	Source * sources_h = initialize_sources(I, &SA_h); 
 	Source * sources_d = initialize_device_sources( I, &SA_h, &SA_d, sources_h); 
+	cudaDeviceSynchronize();
 	
+	printf("Building Exponential Table...\n");
 	// Build Exponential Table
 	Table table = buildExponentialTable();
 	Table * table_d;
-	cudaMalloc((void **) &table_d, sizeof(Table));
-	cudaMemcpy(table_d, &table, sizeof(Table), cudaMemcpyHostToDevice);
+	CUDA_CALL( cudaMalloc((void **) &table_d, sizeof(Table)) );
+	CUDA_CALL( cudaMemcpy(table_d, &table, sizeof(Table), cudaMemcpyHostToDevice) );
 
 	// Setup CUDA blocks / threads
 	int n_blocks = sqrt(I.segments);
@@ -33,23 +39,27 @@ int main( int argc, char * argv[] )
 		blocks.y++;
 	assert( blocks.x * blocks.y >= I.segments );
 	
+	printf("Setting up CUDA RNG...\n");
 	// Setup CUDA RNG on Device
 	curandState * RNG_states;
-	cudaMalloc((void **)&RNG_states, I.segments * sizeof(curandState));
+	CUDA_CALL( cudaMalloc((void **)&RNG_states, I.segments * sizeof(curandState)) );
 	setup_kernel<<<blocks, I.egroups>>>(RNG_states, I);
+	cudaDeviceSynchronize();
 
+	printf("Setting up Flux State Vectors...\n");
 	// Allocate Some Flux State vectors to randomly pick from
 	float * flux_states;
 	int N_flux_states = 1000;
 	assert( I.segments >= N_flux_states );
-	cudaMalloc((void **) &flux_states, 1000000 * I.egroups * sizeof(float));
+	CUDA_CALL( cudaMalloc((void **) &flux_states, 1000000 * I.egroups * sizeof(float)) );
 	init_flux_states<<< blocks, I.egroups >>> ( flux_states, N_flux_states, I, RNG_states );
+
+	printf("Initialization Complete.\n");
 
 	center_print("SIMULATION", 79);
 	border_print();
-	printf("Attentuating fluxes across segments...\n");
 	cudaDeviceSynchronize();
-	printf("HELLLOOOOO!!!\n");
+	printf("Attentuating fluxes across segments...\n");
 
 	// CUDA timer variables
 	cudaEvent_t start, stop;

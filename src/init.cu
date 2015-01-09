@@ -90,13 +90,6 @@ Source * initialize_sources( Input I, Source_Arrays * SA )
 	for( int i = 0; i < I.source_regions; i++ )
 		sources[i].sigT_id = i * I.egroups;
 
-	// Allocate Locks
-	#ifdef OPENMP
-	SA->locks_arr = init_locks(I);
-	for( int i = 0; i < I.source_regions; i++)
-		sources[i].locks_id = i * I.course_axial_intervals;
-	#endif
-
 	// Initialize fine source and flux to random numbers
 	for( long i = 0; i < N_fine; i++ )
 	{
@@ -115,26 +108,22 @@ Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays
 {
 	// Allocate & Copy Fine Source Data
 	long N_fine = I.source_regions * I.fine_axial_intervals * I.egroups;
-	cudaMalloc((void **) &SA_d->fine_source_arr, N_fine * sizeof(float));
-	cudaMemcpy(SA_d->fine_source_arr, SA_h->fine_source_arr,
-			N_fine * sizeof(float), cudaMemcpyHostToDevice);
+	CUDA_CALL( cudaMalloc((void **) &SA_d->fine_source_arr, N_fine * sizeof(float)) );
+	CUDA_CALL( cudaMemcpy(SA_d->fine_source_arr, SA_h->fine_source_arr, N_fine * sizeof(float), cudaMemcpyHostToDevice) );
 
 	// Allocate & Copy Fine Flux Data
-	cudaMalloc((void **) &SA_d->fine_flux_arr, N_fine * sizeof(float));
-	cudaMemcpy(SA_d->fine_flux_arr, SA_h->fine_flux_arr,
-			N_fine * sizeof(float), cudaMemcpyHostToDevice);
+	CUDA_CALL( cudaMalloc((void **) &SA_d->fine_flux_arr, N_fine * sizeof(float)) );
+	CUDA_CALL( cudaMemcpy(SA_d->fine_flux_arr, SA_h->fine_flux_arr, N_fine * sizeof(float), cudaMemcpyHostToDevice) );
 
 	// Allocate & Copy SigT Data
 	long N_sigT = I.source_regions * I.egroups;
-	cudaMalloc((void **) &SA_d->sigT_arr, N_sigT * sizeof(float));
-	cudaMemcpy(SA_d->sigT_arr, SA_h->sigT_arr,
-			N_sigT * sizeof(float), cudaMemcpyHostToDevice);
+	CUDA_CALL( cudaMalloc((void **) &SA_d->sigT_arr, N_sigT * sizeof(float)) );
+	CUDA_CALL( cudaMemcpy(SA_d->sigT_arr, SA_h->sigT_arr, N_sigT * sizeof(float), cudaMemcpyHostToDevice) );
 
 	// Allocate & Copy Source Array Data
 	Source * sources_d;
-	cudaMalloc((void **) &sources_d, I.source_regions * sizeof(Source));
-	cudaMemcpy(sources_d, sources_h, I.source_regions * sizeof(Source),
-			cudaMemcpyHostToDevice);
+	CUDA_CALL( cudaMalloc((void **) &sources_d, I.source_regions * sizeof(Source)) );
+	CUDA_CALL( cudaMemcpy(sources_d, sources_h, I.source_regions * sizeof(Source), cudaMemcpyHostToDevice) );
 
 	return sources_d;
 }
