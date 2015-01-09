@@ -18,9 +18,12 @@ __global__ void	init_flux_states( float * flux_states, int N_flux_states, Input 
 	if(blockId >= N_flux_states)
 		return;
 
+	// Assign RNG state
+	curandState * localState = &state[blockId % I.streams];
+
 	if( threadIdx.x == 0 )
 		for( int i = 0; i < I.egroups; i++ )
-			flux_states[threadId +i] = curand_uniform(&state[blockId]);
+			flux_states[blockId +i] = curand_uniform(localState);
 }
 
 // Gets I from user and sets defaults
@@ -56,11 +59,6 @@ double mem_estimate( Input I )
 	// SigT Data
 	long N_sigT = I.source_regions * I.egroups;
 	nbytes += N_sigT * sizeof(float);
-
-	// OpenMP Locks
-	#ifdef OPENMP
-	nbytes += I.source_regions * I.course_axial_intervals * sizeof(omp_lock_t);
-	#endif
 
 	// Return MB
 	return (double) nbytes / 1024.0 / 1024.0;

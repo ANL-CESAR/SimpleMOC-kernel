@@ -77,6 +77,7 @@ void print_input_summary(Input I)
 	printf("%-25s%d\n", "Course Axial Intervals:", I.course_axial_intervals);
 	printf("%-25s%d\n", "Fine Axial Intervals:", I.fine_axial_intervals);
 	printf("%-25s", "Segments:"); fancy_int(I.segments);
+	printf("%-25s%d\n", "Random Number Streams:", I.streams);
 	printf("%-25s%.2lf\n", "Est. Memory Usage:", mem_estimate(I)); 
 	border_print();
 }

@@ -52,10 +52,12 @@ int main( int argc, char * argv[] )
 	printf("Setting up Flux State Vectors...\n");
 	// Allocate Some Flux State vectors to randomly pick from
 	float * flux_states;
-	int N_flux_states = 1000;
+	int N_flux_states = 10000;
 	assert( I.segments >= N_flux_states );
-	CUDA_CALL( cudaMalloc((void **) &flux_states, 1000000 * I.egroups * sizeof(float)) );
+	CUDA_CALL( cudaMalloc((void **) &flux_states, N_flux_states * I.egroups * sizeof(float)) );
+	printf("CUDA ptr = %p\n", flux_states);
 	init_flux_states<<< blocks, I.egroups >>> ( flux_states, N_flux_states, I, RNG_states );
+	printf("CUDA ptr = %p\n", flux_states);
 
 	printf("Initialization Complete.\n");
 
@@ -80,6 +82,10 @@ int main( int argc, char * argv[] )
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&time, start, stop);
 	cudaDeviceSynchronize();
+
+	float * host_flux_states = (float*) malloc(N_flux_states * I.egroups * sizeof(float));
+	printf("CUDA ptr = %p\n", flux_states);
+	CUDA_CALL( cudaMemcpy( host_flux_states, flux_states, N_flux_states * I.egroups * sizeof(float), cudaMemcpyDeviceToHost) );
 
 	printf("Simulation Complete.\n");
 
