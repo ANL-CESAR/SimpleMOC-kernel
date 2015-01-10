@@ -39,7 +39,7 @@ LDFLAGS = -lm -lcurand
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
-  CFLAGS += -g
+  CFLAGS += -g -G
 endif
 
 # Profiling Flags

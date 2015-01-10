@@ -84,12 +84,10 @@ __global__ void run_kernel( Input I, Source * S,
 	// load fine source region flux vector
 	float * FSR_flux = &SA.fine_flux_arr[ S[QSR_id].fine_flux_id + FAI_id * egroups];
 
-	/*
 	if( FAI_id == 0 )
 	{
-	*/
-		float * f2 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
-		float * f3 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
+		float * f2 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
+		float * f3 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
 		// cycle over energy groups
 		// load neighboring sources
 		float y2 = f2[g];
@@ -103,14 +101,11 @@ __global__ void run_kernel( Input I, Source * S,
 		q0 = c0 + c1*zin;
 		q1 = c1;
 		q2 = 0;
-	/*
 	}
-	*/
-	/*
 	else if ( FAI_id == I.fine_axial_intervals - 1 )
 	{
-		float * f1 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
-		float * f2 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
+		float * f1 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
+		float * f2 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
 		// cycle over energy groups
 		// load neighboring sources
 		float y1 = f1[g];
@@ -121,15 +116,15 @@ __global__ void run_kernel( Input I, Source * S,
 		float c1 = (y2 - y1) / dz;
 
 		// calculate q0, q1, q2
-		q0[g] = c0 + c1*zin;
-		q1[g] = c1;
-		q2[g] = 0;
+		q0 = c0 + c1*zin;
+		q1 = c1;
+		q2 = 0;
 	}
 	else
 	{
-		float * f1 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
-		float * f2 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
-		float * f3 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
+		float * f1 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
+		float * f2 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
+		float * f3 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
 		// cycle over energy groups
 		// load neighboring sources
 		float y1 = f1[g]; 
@@ -142,52 +137,49 @@ __global__ void run_kernel( Input I, Source * S,
 		float c2 = (y1 - 2.f*y2 + y3) / (2.f*dz*dz);
 
 		// calculate q0, q1, q2
-		q0[g] = c0 + c1*zin + c2*zin*zin;
-		q1[g] = c1 + 2.f*c2*zin;
-		q2[g] = c2;
+		q0 = c0 + c1*zin + c2*zin*zin;
+		q1 = c1 + 2.f*c2*zin;
+		q2 = c2;
 	}
-	*/
-	return;
-
 
 	// load total cross section
-	sigT[g] = SA.sigT_arr[ S[QSR_id].sigT_id + g];
+	sigT = SA.sigT_arr[ S[QSR_id].sigT_id + g];
 
 	// calculate common values for efficiency
-	tau[g] = sigT[g] * ds;
-	sigT2[g] = sigT[g] * sigT[g];
+	tau = sigT * ds;
+	sigT2 = sigT * sigT;
 
-	interpolateTable( table, tau[g], &expVal[g] );  
+	interpolateTable( table, tau, &expVal );  
 
 	// Flux Integral
 
 	// Re-used Term
-	reuse[g] = tau[g] * (tau[g] - 2.f) + 2.f * expVal[g] 
-		/ (sigT[g] * sigT2[g]); 
+	reuse = tau * (tau - 2.f) + 2.f * expVal
+		/ (sigT * sigT2); 
 
 	// add contribution to new source flux
-	flux_integral[g] = (q0[g] * tau[g] + (sigT[g] * state_flux[g] - q0[g])
-			* expVal[g]) / sigT2[g] + q1[g] * mu * reuse[g] + q2[g] * mu2 
-		* (tau[g] * (tau[g] * (tau[g] - 3.f) + 6.f) - 6.f * expVal[g]) 
-		/ (3.f * sigT2[g] * sigT2[g]);
+	flux_integral = (q0 * tau + (sigT * state_flux[g] - q0)
+			* expVal) / sigT2 + q1 * mu * reuse + q2 * mu2 
+		* (tau * (tau * (tau - 3.f) + 6.f) - 6.f * expVal) 
+		/ (3.f * sigT2 * sigT2);
 
 	// Prepare tally
-	tally[g] = weight * flux_integral[g];
+	tally = weight * flux_integral;
 
 	// SHOULD BE ATOMIC HERE!
-	//FSR_flux[g] += tally[g];
-	atomicAdd(&FSR_flux[g], (float) tally[g]);
+	FSR_flux[g] += tally;
+	//atomicAdd(&FSR_flux[g], (float) tally);
 
 	// Term 1
-	t1[g] = q0[g] * expVal[g] / sigT[g];  
+	t1 = q0 * expVal / sigT;  
 	// Term 2
-	t2[g] = q1[g] * mu * (tau[g] - expVal[g]) / sigT2[g]; 
+	t2 = q1 * mu * (tau - expVal) / sigT2; 
 	// Term 3
-	t3[g] =	q2[g] * mu2 * reuse[g];
+	t3 =	q2 * mu2 * reuse;
 	// Term 4
-	t4[g] = state_flux[g] * (1.f - expVal[g]);
+	t4 = state_flux[g] * (1.f - expVal);
 	// Total psi
-	state_flux[g] = t1[g] + t2[g] + t3[g] + t4[g];
+	state_flux[g] = t1 + t2 + t3 + t4;
 }	
 
 /* Interpolates a formed exponential table to compute ( 1- exp(-x) )

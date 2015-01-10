@@ -78,6 +78,7 @@ int main( int argc, char * argv[] )
 	cudaEventRecord(start, 0);
 	run_kernel <<< blocks, I.egroups >>> (I, sources_d, SA_d, table_d, 
 			RNG_states, flux_states, N_flux_states);
+	CudaCheckError();
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(start);
 	cudaEventSynchronize(stop);
@@ -86,7 +87,7 @@ int main( int argc, char * argv[] )
 
 	float * host_flux_states = (float*) malloc(N_flux_states * I.egroups * sizeof(float));
 	printf("CUDA ptr = %p\n", flux_states);
-	CUDA_CALL( cudaMemcpy( host_flux_states, flux_states, N_flux_states * I.egroups * sizeof(float), cudaMemcpyDeviceToHost) );
+	CUDA_CALL( cudaMemcpy( host_flux_states, flux_states, N_flux_states * I.egroups * sizeof(float), cudaMemcpyDeviceToHost));
 
 	printf("Simulation Complete.\n");
 

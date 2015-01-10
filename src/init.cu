@@ -13,7 +13,7 @@ __global__ void setup_kernel(curandState *state, Input I)
 __global__ void	init_flux_states( float * flux_states, int N_flux_states, Input I, curandState * state)
 {
 	int blockId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment	
-	int threadId = blockId * blockDim.x + threadIdx.x; // energy group
+	//int threadId = blockId * blockDim.x + threadIdx.x; // energy group
 
 	if(blockId >= N_flux_states)
 		return;
