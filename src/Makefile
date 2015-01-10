@@ -3,8 +3,8 @@
 #===============================================================================
 
 COMPILER    = nvcc
-OPTIMIZE    = yes
-DEBUG       = no
+OPTIMIZE    = no
+DEBUG       = yes
 PROFILE     = no
 BENCHMARK   = no
 

@@ -38,6 +38,7 @@ int main( int argc, char * argv[] )
 	if( blocks.x * blocks.y < I.segments )
 		blocks.y++;
 	assert( blocks.x * blocks.y >= I.segments );
+	printf("Launching with: %d x %d blocks.\n", blocks.x, blocks.y);
 	
 	CudaCheckError();
 	printf("Setting up CUDA RNG...\n");

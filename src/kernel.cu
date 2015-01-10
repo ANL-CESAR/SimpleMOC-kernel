@@ -20,23 +20,22 @@ __global__ void run_kernel( Input I, Source * S,
 
 	int g = threadIdx.x; // Each energy group (g) is one thread in a block
 
-	// Assign shared SIMD vectors
-	extern __shared__ float simd_shared_vecs[];
-	float * s = simd_shared_vecs;
-	float * q0 =            s; s+= I.egroups;
-	float * q1 =            s; s+= I.egroups;
-	float * q2 =            s; s+= I.egroups;
-	float * sigT =          s; s+= I.egroups;
-	float * tau =           s; s+= I.egroups;
-	float * sigT2 =         s; s+= I.egroups;
-	float * expVal =        s; s+= I.egroups;
-	float * reuse =         s; s+= I.egroups;
-	float * flux_integral = s; s+= I.egroups;
-	float * tally =         s; s+= I.egroups;
-	float * t1 =            s; s+= I.egroups;
-	float * t2 =            s; s+= I.egroups;
-	float * t3 =            s; s+= I.egroups;
-	float * t4 =            s; s+= I.egroups;
+	// Thread Local (i.e., specific to E group) variables
+	// Similar to SIMD vectors in CPU code
+	float q0           ;
+	float q1           ;
+	float q2           ;
+	float sigT         ;
+	float tau          ;
+	float sigT2        ;
+	float expVal       ;
+	float reuse        ;
+	float flux_integral;
+	float tally        ;
+	float t1           ;
+	float t2           ;
+	float t3           ;
+	float t4           ;
 
 	// Assign RNG state
 	curandState * localState = &state[blockId % I.streams];
@@ -85,8 +84,10 @@ __global__ void run_kernel( Input I, Source * S,
 	// load fine source region flux vector
 	float * FSR_flux = &SA.fine_flux_arr[ S[QSR_id].fine_flux_id + FAI_id * egroups];
 
+	/*
 	if( FAI_id == 0 )
 	{
+	*/
 		float * f2 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
 		float * f3 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
 		// cycle over energy groups
@@ -99,10 +100,13 @@ __global__ void run_kernel( Input I, Source * S,
 		float c1 = (y3 - y2) / dz;
 
 		// calculate q0, q1, q2
-		q0[g] = c0 + c1*zin;
-		q1[g] = c1;
-		q2[g] = 0;
+		q0 = c0 + c1*zin;
+		q1 = c1;
+		q2 = 0;
+	/*
 	}
+	*/
+	/*
 	else if ( FAI_id == I.fine_axial_intervals - 1 )
 	{
 		float * f1 = &SA.fine_flux_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
@@ -142,6 +146,8 @@ __global__ void run_kernel( Input I, Source * S,
 		q1[g] = c1 + 2.f*c2*zin;
 		q2[g] = c2;
 	}
+	*/
+	return;
 
 
 	// load total cross section
