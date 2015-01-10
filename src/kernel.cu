@@ -49,18 +49,18 @@ __global__ void run_kernel( Input I, Source * S,
 	// (We are not concerned with coherency here as in actual
 	// program threads would be organized in a more specific order)
 	if( threadIdx.x == 0 )
-		state_flux_id = curand(localState) * N_state_fluxes;
+		state_flux_id = curand(localState) % N_state_fluxes;
 
 	__syncthreads();
 	float * state_flux = &state_fluxes[state_flux_id];
 
 	// Pick Random QSR
 	if( threadIdx.x == 0 )
-		QSR_id = curand(localState) * I.source_regions;
+		QSR_id = curand(localState) % I.source_regions;
 
 	// Pick Random Fine Axial Interval
 	if( threadIdx.x == 0 )
-		FAI_id = curand(localState) * I.fine_axial_intervals;
+		FAI_id = curand(localState) % I.fine_axial_intervals;
 
 	__syncthreads();
 
