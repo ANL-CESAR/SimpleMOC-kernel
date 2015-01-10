@@ -16,15 +16,15 @@ int main( int argc, char * argv[] )
 	center_print("INITIALIZATION", 79);
 	border_print();
 
-	printf("Building Source Data Arrays...\n");
 	// Build Source Data
+	printf("Building Source Data Arrays...\n");
 	Source_Arrays SA_h, SA_d;
 	Source * sources_h = initialize_sources(I, &SA_h); 
 	Source * sources_d = initialize_device_sources( I, &SA_h, &SA_d, sources_h); 
 	cudaDeviceSynchronize();
 	
-	printf("Building Exponential Table...\n");
 	// Build Exponential Table
+	printf("Building Exponential Table...\n");
 	Table table = buildExponentialTable();
 	Table * table_d;
 	CUDA_CALL( cudaMalloc((void **) &table_d, sizeof(Table)) );
@@ -38,30 +38,25 @@ int main( int argc, char * argv[] )
 	if( blocks.x * blocks.y < I.segments )
 		blocks.y++;
 	assert( blocks.x * blocks.y >= I.segments );
-	printf("Launching with: %d x %d blocks.\n", blocks.x, blocks.y);
-	
-	CudaCheckError();
-	printf("Setting up CUDA RNG...\n");
+
 	// Setup CUDA RNG on Device
+	printf("Setting up CUDA RNG...\n");
 	curandState * RNG_states;
 	CUDA_CALL( cudaMalloc((void **)&RNG_states, I.streams * sizeof(curandState)) );
 	setup_kernel<<<I.streams/100 + 1, 100>>>(RNG_states, I);
 	CudaCheckError();
-
 	cudaDeviceSynchronize();
 
-	printf("Setting up Flux State Vectors...\n");
 	// Allocate Some Flux State vectors to randomly pick from
+	printf("Setting up Flux State Vectors...\n");
 	float * flux_states;
 	int N_flux_states = 10000;
 	assert( I.segments >= N_flux_states );
 	CUDA_CALL( cudaMalloc((void **) &flux_states, N_flux_states * I.egroups * sizeof(float)) );
-	printf("CUDA ptr = %p\n", flux_states);
 	init_flux_states<<< blocks, I.egroups >>> ( flux_states, N_flux_states, I, RNG_states );
-	printf("CUDA ptr = %p\n", flux_states);
+
 
 	printf("Initialization Complete.\n");
-
 	border_print();
 	center_print("SIMULATION", 79);
 	border_print();
@@ -86,7 +81,6 @@ int main( int argc, char * argv[] )
 	cudaDeviceSynchronize();
 
 	float * host_flux_states = (float*) malloc(N_flux_states * I.egroups * sizeof(float));
-	printf("CUDA ptr = %p\n", flux_states);
 	CUDA_CALL( cudaMemcpy( host_flux_states, flux_states, N_flux_states * I.egroups * sizeof(float), cudaMemcpyDeviceToHost));
 
 	printf("Simulation Complete.\n");
