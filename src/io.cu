@@ -84,7 +84,7 @@ void print_input_summary(Input I)
 	printf("%-25s%d\n", "Course Axial Intervals:", I.course_axial_intervals);
 	printf("%-25s%d\n", "Fine Axial Intervals:", I.fine_axial_intervals);
 	printf("%-25s", "Segments:"); fancy_int(I.segments);
-	printf("%-25s%d\n", "Random Number Streams:", I.streams);
+	printf("%-25s", "Random Number Streams:"); fancy_int(I.streams);
 	border_print();
 }
 
