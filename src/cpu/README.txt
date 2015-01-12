@@ -14,14 +14,6 @@
                           | . \  __/ |  | | | |  __/ |
                           |_|\_\___|_|  |_| |_|\___|_|
 
-
-==============================================================================
-Purpose of Flat Branch: 
-
-Data structures have been flattened and un-optimized for easier
-porting to device offload languages. This branch is a better starting point
-for a CUDA, OpenACC, or OCCA port than the master branch.
-
 ==============================================================================
 Contact Information
 ==============================================================================
@@ -61,12 +53,13 @@ SimpleMOC-kernel supports the following architectures:
 - Xeon Phi
 - NVIDIA Tesla GPU
 
-Both the CPU and Phi codes are available in the "cpu" folder of the
+Both the CPU and Phi codes are available in the master branch of the
 repository. To enable Phi support, simply set the "MIC" flag in the
-makefile to yes.
+makefile to yes. In order to run on the GPU code, you must checkout the
+"cuda" branch of the repository using the following command while inside
+the SimpleMOC-kernel folder via git:
 
-The CUDA version of the code is available in the "cuda" folder of the
-repository. 
+>$ git checkout cuda
 
 ==============================================================================
 Quick Start Guide
