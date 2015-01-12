@@ -53,10 +53,11 @@ SimpleMOC-kernel supports the following architectures:
 - Xeon Phi
 - NVIDIA Tesla GPU
 
-Both the CPU and Phi code is available in the master branch of the repository.
-In order to run on the GPU code, you must checkout the "cuda" branch of the
-repository using the following command while inside the SimpleMOC-kernel
-folder via git:
+Both the CPU and Phi codes are available in the master branch of the
+repository. To enable Phi support, simply set the "MIC" flag in the
+makefile to yes. In order to run on the GPU code, you must checkout the
+"cuda" branch of the repository using the following command while inside
+the SimpleMOC-kernel folder via git:
 
 >$ git checkout cuda
 
