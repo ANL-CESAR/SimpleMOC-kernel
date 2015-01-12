@@ -16,13 +16,6 @@
 
 
 ==============================================================================
-Purpose of Flat Branch: 
-
-Data structures have been flattened and un-optimized for easier
-porting to device offload languages. This branch is a better starting point
-for a CUDA, OpenACC, or OCCA port than the master branch.
-
-==============================================================================
 Contact Information
 ==============================================================================
 
