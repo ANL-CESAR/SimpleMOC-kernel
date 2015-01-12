@@ -44,6 +44,23 @@ and is therefore useful for analyzing optimization methods and performance
 implications for exascale supercomputer architectures.
 
 ==============================================================================
+Architectural Support
+==============================================================================
+
+SimpleMOC-kernel supports the following architectures:
+
+- Multi-threaded CPU
+- Xeon Phi
+- NVIDIA Tesla GPU
+
+Both the CPU and Phi code is available in the master branch of the repository.
+In order to run on the GPU code, you must checkout the "cuda" branch of the
+repository using the following command while inside the SimpleMOC-kernel
+folder via git:
+
+>$ git checkout cuda
+
+==============================================================================
 Quick Start Guide
 ==============================================================================
 
