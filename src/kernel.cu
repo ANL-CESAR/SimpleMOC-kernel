@@ -167,8 +167,8 @@ __global__ void run_kernel( Input I, Source * S,
 	tally = weight * flux_integral;
 
 	// SHOULD BE ATOMIC HERE!
-	FSR_flux[g] += tally;
-	//atomicAdd(&FSR_flux[g], (float) tally);
+	//FSR_flux[g] += tally;
+	atomicAdd(&FSR_flux[g], (float) tally);
 
 	// Term 1
 	t1 = q0 * expVal / sigT;  
