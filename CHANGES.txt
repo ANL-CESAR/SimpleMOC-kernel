@@ -1,0 +1,11 @@
+===============================================================================
+NEW IN VERSION 1
+===============================================================================
+- The code has been ported to CUDA. The repository is now split up into two
+  source folders - "cpu" and "cuda", which contain the CPU/Phi optimized code
+  and GPU CUDA code respectively.
+
+- A flat branch of the repo is also available. This branch has more GPU
+  friendly data structures that should make the repo easier to port to
+  accelerator languages such as OCCA or OpenACC.
+===============================================================================
