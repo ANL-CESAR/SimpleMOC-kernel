@@ -1,6 +1,8 @@
 #ifndef __SimpleMOC_header
 #define __SimpleMOC_header
 
+#include <curand_kernel.h>
+#include <cuda.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include<math.h>
@@ -12,14 +14,16 @@
 #include<pthread.h>
 #include<unistd.h>
 #include<malloc.h>
+#include<assert.h>
 
-#ifdef OPENMP
-#include<omp.h>
-#endif
+#define CUDA_ERROR_CHECK
+ 
+#define CudaCheckError()    __cudaCheckError( __FILE__, __LINE__ )
 
-#ifdef PAPI
-#include<papi.h>
-#endif
+// CUDA Error Handling Macro
+#define CUDA_CALL(x) do { if((x) != cudaSuccess) { \
+    printf("Error at %s:%d\n",__FILE__,__LINE__); \
+    return EXIT_FAILURE;}} while(0)
 
 // User inputs
 typedef struct{
@@ -29,84 +33,54 @@ typedef struct{
 	long segments;
 	int egroups;
 	int nthreads;
-
-    #ifdef PAPI
-	int papi_event_set;
-    // String for command line PAPI event
-    char event_name[PAPI_MAX_STR_LEN]; 
-    // Array to accumulate PAPI counts across all threads
-    long long *vals_accum;
-    #endif
+	int streams;
 } Input;
 
 // Source Region Structure
 typedef struct{
-	float * fine_flux;
-	float * fine_source;
-	float * sigT;
-	#ifdef OPENMP
-	omp_lock_t * locks;
-	#endif
+	long fine_flux_id;
+	long fine_source_id;
+	long sigT_id;
 } Source;
+
+// Source Arrays
+typedef struct{
+	float * fine_flux_arr;
+	float * fine_source_arr;
+	float * sigT_arr;
+} Source_Arrays;
 
 // Table structure for computing exponential
 typedef struct{
-	float * values;
+	float values[706];
 	float dx;
 	float maxVal;
 	int N;
 } Table;
 
-// Local SIMD Vector Arrays
-typedef struct{
-	float * q0;
-	float * q1;
-	float * q2;
-	float * sigT;
-	float * tau;
-	float * sigT2;
-	float * expVal;
-	float * reuse;
-	float * flux_integral;
-	float * tally;
-	float * t1;
-	float * t2;
-	float * t3;
-	float * t4;
-} SIMD_Vectors;
-
 // kernel.c
-void run_kernel( Input * I, Source * S, Table * table);
-void attenuate_segment( Input * restrict I, Source * restrict S,
-		int QSR_id, int FAI_id, float * restrict state_flux,
-		SIMD_Vectors * restrict simd_vecs, Table * restrict table); 
-float interpolateTable( Table * table, float x);
+__global__ void run_kernel( Input I, Source * S,
+		Source_Arrays SA, Table * table, curandState * state,
+		float * state_fluxes, int N_state_fluxes);
+__device__ void interpolateTable(Table * table, float x, float * out);
 
 // init.c
-Source * aligned_initialize_sources( Input * I );
-Source * initialize_sources( Input * I );
-Table * buildExponentialTable( float precision, float maxVal );
-Input * set_default_input( void );
-SIMD_Vectors aligned_allocate_simd_vectors(Input * I);
-SIMD_Vectors allocate_simd_vectors(Input * I);
-double get_time(void);
-#ifdef OPENMP
-omp_lock_t * init_locks( Input * I );
-#endif
+double mem_estimate( Input I );
+__global__ void setup_kernel(curandState *state, Input I);
+__global__ void	init_flux_states( float * flux_states, int N_flux_states, Input I, curandState * state);
+Source * initialize_sources( Input I, Source_Arrays * SA );
+Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays * SA_d, Source * sources_h );
+Table buildExponentialTable( void );
+Input set_default_input( void );
+void __cudaCheckError( const char *file, const int line );
 
 // io.c
 void logo(int version);
 void center_print(const char *s, int width);
 void border_print(void);
 void fancy_int( int a );
-void print_input_summary(Input * input);
+void print_input_summary(Input input);
 void read_CLI( int argc, char * argv[], Input * input );
 void print_CLI_error(void);
-void read_input_file( Input * I, char * fname);
-
-// papi.c
-void papi_serial_init(void);
-void counter_init( int *eventset, int *num_papi_events, Input * I );
-void counter_stop( int * eventset, int num_papi_events, Input * I );
 
 #endif
