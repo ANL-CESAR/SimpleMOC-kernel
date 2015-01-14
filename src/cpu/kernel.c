@@ -96,12 +96,12 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	// calculated based off position in geometry. This treatment
 	// shaves off a few FLOPS, but is not significant compared to the
 	// rest of the function.
-	float dz = 0.1f;
-	float zin = 0.3f; 
-	float weight = 0.5f;
-	float mu = 0.9f;
-	float mu2 = 0.3f;
-	float ds = 0.7f;
+	const float dz = 0.1f;
+	const float zin = 0.3f; 
+	const float weight = 0.5f;
+	const float mu = 0.9f;
+	const float mu2 = 0.3f;
+	const float ds = 0.7f;
 
 	const int egroups = I->egroups;
 
@@ -121,12 +121,12 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		for( int g = 0; g < egroups; g++)
 		{
 			// load neighboring sources
-			float y2 = f2[g];
-			float y3 = f3[g];
+			const float y2 = f2[g];
+			const float y3 = f3[g];
 
 			// do linear "fitting"
-			float c0 = y2;
-			float c1 = (y3 - y2) / dz;
+			const float c0 = y2;
+			const float c1 = (y3 - y2) / dz;
 
 			// calculate q0, q1, q2
 			q0[g] = c0 + c1*zin;
@@ -147,12 +147,12 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		for( int g = 0; g < egroups; g++)
 		{
 			// load neighboring sources
-			float y1 = f1[g];
-			float y2 = f2[g];
+			const float y1 = f1[g];
+			const float y2 = f2[g];
 
 			// do linear "fitting"
-			float c0 = y2;
-			float c1 = (y2 - y1) / dz;
+			const float c0 = y2;
+			const float c1 = (y2 - y1) / dz;
 
 			// calculate q0, q1, q2
 			q0[g] = c0 + c1*zin;
@@ -174,14 +174,14 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		for( int g = 0; g < egroups; g++)
 		{
 			// load neighboring sources
-			float y1 = f1[g]; 
-			float y2 = f2[g];
-			float y3 = f3[g];
+			const float y1 = f1[g]; 
+			const float y2 = f2[g];
+			const float y3 = f3[g];
 
 			// do quadratic "fitting"
-			float c0 = y2;
-			float c1 = (y1 - y3) / (2.f*dz);
-			float c2 = (y1 - 2.f*y2 + y3) / (2.f*dz*dz);
+			const float c0 = y2;
+			const float c1 = (y1 - y3) / (2.f*dz);
+			const float c2 = (y1 - 2.f*y2 + y3) / (2.f*dz*dz);
 
 			// calculate q0, q1, q2
 			q0[g] = c0 + c1*zin + c2*zin*zin;

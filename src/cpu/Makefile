@@ -78,7 +78,7 @@ ifeq ($(COMPILER),gnu)
 endif
 ifeq ($(COMPILER),intel)
 ifeq ($(MIC), yes)
-  CFLAGS += -O3 -ansi-alias -no-prec-div -DINTEL
+  CFLAGS += -O3 -ansi-alias -no-prec-div -DINTEL -fp-model fast=2
 else
   CFLAGS += -O3 -xhost -ansi-alias -no-prec-div -DINTEL
 endif
