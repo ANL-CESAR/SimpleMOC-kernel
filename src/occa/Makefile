@@ -32,7 +32,7 @@ ifeq ($(COMPILER),nvcc)
 endif
 
 # Standard Flags
-CFLAGS := -arch sm_20 -I/usr/local/cuda-6.0/include -rdc=true 
+CFLAGS := -arch sm_35 -I/usr/local/cuda-6.0/include -rdc=true 
 
 # Linker Flags
 LDFLAGS = -lm
