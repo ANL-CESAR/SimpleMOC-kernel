@@ -1,0 +1,262 @@
+//  ISSUES:
+//    - Source_Arrays struct may need to be split up into three arrays
+//    - Alternatives must be found for curand and curandState
+//    - Does OCCA have an atomicAdd() operation?
+
+// User inputs
+typedef struct{
+  int source_regions;
+  int course_axial_intervals;
+  int fine_axial_intervals;
+  long segments;
+  int egroups;
+  int nthreads;
+  int streams;
+} Input;
+
+// Source Region Structure
+typedef struct{
+  long fine_flux_id;
+  long fine_source_id;
+  long sigT_id;
+} Source;
+
+// Source Arrays
+typedef struct{
+  float * fine_flux_arr;
+  float * fine_source_arr;
+  float * sigT_arr;
+} Source_Arrays;
+
+// Table structure for computing exponential
+typedef struct{
+  float values[706];
+  float dx;
+  float maxVal;
+  int N;
+} Table;
+
+/* Interpolates a formed exponential table to compute ( 1- exp(-x) )
+ *  at the desired x value */
+occaFunction void interpolateTable(
+    Table * table, 
+    float x, 
+    float * out)
+{
+  // check to ensure value is in domain
+  if( x > table->maxVal )
+    *out = 1.0f;
+  else
+  {
+    int interval = (int) ( x / table->dx + 0.5f * table->dx );
+    interval = interval * 2;
+    float slope = table->values[ interval ];
+    float intercept = table->values[ interval + 1 ];
+    float val = slope * x + intercept;
+    *out = val;
+  }
+}
+
+/* My parallelization scheme here is to basically have a single
+ * block be a geometrical segment, with each thread within the
+ * block represent a single energy phase. On the CPU, the
+ * inner SIMD-ized loop is over energy (i.e, 100 energy groups).
+ * This should allow for each BLOCK to have:
+ * 		- A single state variable for the RNG
+ * 		- A set of __shared__ SIMD vectors, each thread id being its idx
+ */
+
+occaKernel void run_kernel( 
+    Input I, 
+    Source * S,
+    Source_Arrays SA,    // Split this up into the three components
+    Table * table, 
+    curandState * state, // Should replace this for non-CUDA RNG
+    float * state_fluxes, 
+    int N_state_fluxes)
+{
+
+  for (int outerId1 = 0; outerId1 < outerDim1; ++outerId1; outer1) 
+  {
+    for (int outerId0 = 0; outerId0 < outerDim0; ++outerId0; outer0) 
+    {
+
+      
+      // int outerId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment in CUDA
+      int outerId = outerId1  * outerDim0 + outerId0;  // geometric segment in OCCA
+
+      if( outerId >= I.segments )
+        return;
+
+      // Randomized variables (common accross all thread within block)
+      shared int state_flux_id;
+      shared int QSR_id;
+      shared int FAI_id;
+
+      for (int innerId0=0; innerId0 < innerDim0; ++innerId0; inner0) 
+      {
+
+        int g = innerId0; // Each energy group (g) is one thread in a block
+
+        // Thread Local (i.e., specific to E group) variables
+        // Similar to SIMD vectors in CPU code
+        float q0           ;
+        float q1           ;
+        float q2           ;
+        float sigT         ;
+        float tau          ;
+        float sigT2        ;
+        float expVal       ;
+        float reuse        ;
+        float flux_integral;
+        float tally        ;
+        float t1           ;
+        float t2           ;
+        float t3           ;
+        float t4           ;
+
+        // Assign RNG state
+        // Need to find non-CUDA alternative
+        curandState * localState = &state[blockId % I.streams];  
+
+        // Find State Flux Vector in global memory
+        // (We are not concerned with coherency here as in actual
+        // program threads would be organized in a more specific order)
+        if( innerId0 == 0 )
+          state_flux_id = curand(localState) % N_state_fluxes;
+
+        barrier(localMemFence);
+
+        float * state_flux = &state_fluxes[state_flux_id];
+
+        // Pick Random QSR
+        if( innerId0 == 0 )
+          QSR_id = curand(localState) % I.source_regions;
+
+        // Pick Random Fine Axial Interval
+        if( innerId0 == 0 )
+          FAI_id = curand(localState) % I.fine_axial_intervals;
+
+        barrier(localMemFence);
+
+        //////////////////////////////////////////////////////////
+        // Attenuate Segment
+        //////////////////////////////////////////////////////////
+
+        // Some placeholder constants - In the full app some of these are
+        // calculated based off position in geometry. This treatment
+        // shaves off a few FLOPS, but is not significant compared to the
+        // rest of the function.
+        float dz = 0.1f;
+        float zin = 0.3f; 
+        float weight = 0.5f;
+        float mu = 0.9f;
+        float mu2 = 0.3f;
+        float ds = 0.7f;
+
+        const int egroups = I.egroups;
+
+        // load fine source region flux vector
+        float * FSR_flux = &SA.fine_flux_arr[ S[QSR_id].fine_flux_id + FAI_id * egroups];
+
+        if( FAI_id == 0 )
+        {
+          float * f2 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
+          float * f3 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
+          // cycle over energy groups
+          // load neighboring sources
+          float y2 = f2[g];
+          float y3 = f3[g];
+
+          // do linear "fitting"
+          float c0 = y2;
+          float c1 = (y3 - y2) / dz;
+
+          // calculate q0, q1, q2
+          q0 = c0 + c1*zin;
+          q1 = c1;
+          q2 = 0;
+        }
+        else if ( FAI_id == I.fine_axial_intervals - 1 )
+        {
+          float * f1 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
+          float * f2 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
+          // cycle over energy groups
+          // load neighboring sources
+          float y1 = f1[g];
+          float y2 = f2[g];
+
+          // do linear "fitting"
+          float c0 = y2;
+          float c1 = (y2 - y1) / dz;
+
+          // calculate q0, q1, q2
+          q0 = c0 + c1*zin;
+          q1 = c1;
+          q2 = 0;
+        }
+        else
+        {
+          float * f1 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
+          float * f2 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
+          float * f3 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
+          // cycle over energy groups
+          // load neighboring sources
+          float y1 = f1[g]; 
+          float y2 = f2[g];
+          float y3 = f3[g];
+
+          // do quadratic "fitting"
+          float c0 = y2;
+          float c1 = (y1 - y3) / (2.f*dz);
+          float c2 = (y1 - 2.f*y2 + y3) / (2.f*dz*dz);
+
+          // calculate q0, q1, q2
+          q0 = c0 + c1*zin + c2*zin*zin;
+          q1 = c1 + 2.f*c2*zin;
+          q2 = c2;
+        }
+
+        // load total cross section
+        sigT = SA.sigT_arr[ S[QSR_id].sigT_id + g];
+
+        // calculate common values for efficiency
+        tau = sigT * ds;
+        sigT2 = sigT * sigT;
+
+        interpolateTable( table, tau, &expVal );  
+
+        // Flux Integral
+
+        // Re-used Term
+        reuse = tau * (tau - 2.f) + 2.f * expVal
+          / (sigT * sigT2); 
+
+        // add contribution to new source flux
+        flux_integral = (q0 * tau + (sigT * state_flux[g] - q0)
+            * expVal) / sigT2 + q1 * mu * reuse + q2 * mu2 
+          * (tau * (tau * (tau - 3.f) + 6.f) - 6.f * expVal) 
+          / (3.f * sigT2 * sigT2);
+
+        // Prepare tally
+        tally = weight * flux_integral;
+
+        // SHOULD BE ATOMIC HERE!
+        //FSR_flux[g] += tally;
+        atomicAdd(&FSR_flux[g], (float) tally);
+
+        // Term 1
+        t1 = q0 * expVal / sigT;  
+        // Term 2
+        t2 = q1 * mu * (tau - expVal) / sigT2; 
+        // Term 3
+        t3 =	q2 * mu2 * reuse;
+        // Term 4
+        t4 = state_flux[g] * (1.f - expVal);
+        // Total psi
+        state_flux[g] = t1 + t2 + t3 + t4;
+      } // end inner0
+    } // end outer0
+  } // end outer1
+}	
+
