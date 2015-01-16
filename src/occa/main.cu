@@ -80,6 +80,7 @@ int main( int argc, char * argv[] )
 	cudaEventElapsedTime(&time, start, stop);
 	cudaDeviceSynchronize();
 
+	// Copy final data back to host, for kicks.
 	float * host_flux_states = (float*) malloc(N_flux_states * I.egroups * sizeof(float));
 	CUDA_CALL( cudaMemcpy( host_flux_states, flux_states, N_flux_states * I.egroups * sizeof(float), cudaMemcpyDeviceToHost));
 
