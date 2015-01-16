@@ -1,7 +1,6 @@
 #ifndef __SimpleMOC_header
 #define __SimpleMOC_header
 
-#include <curand_kernel.h>
 #include <cuda.h>
 #include<stdio.h>
 #include<stdlib.h>
@@ -60,14 +59,14 @@ typedef struct{
 
 // kernel.c
 __global__ void run_kernel( Input I, Source * S,
-		Source_Arrays SA, Table * table, curandState * state,
+		Source_Arrays SA, Table * table, unsigned long * state,
 		float * state_fluxes, int N_state_fluxes);
 __device__ void interpolateTable(Table * table, float x, float * out);
+__device__ void LCG_RNG( unsigned long * state );
 
 // init.c
 double mem_estimate( Input I );
-__global__ void setup_kernel(curandState *state, Input I);
-__global__ void	init_flux_states( float * flux_states, int N_flux_states, Input I, curandState * state);
+__global__ void	init_flux_states( float * flux_states, int N_flux_states, Input I, unsigned long * state);
 Source * initialize_sources( Input I, Source_Arrays * SA );
 Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays * SA_d, Source * sources_h );
 Table buildExponentialTable( void );

@@ -39,12 +39,20 @@ int main( int argc, char * argv[] )
 		blocks.y++;
 	assert( blocks.x * blocks.y >= I.segments );
 
-	// Setup CUDA RNG on Device
-	printf("Setting up CUDA RNG...\n");
-	curandState * RNG_states;
-	CUDA_CALL( cudaMalloc((void **)&RNG_states, I.streams * sizeof(curandState)) );
-	setup_kernel<<<I.streams/100 + 1, 100>>>(RNG_states, I);
-	CudaCheckError();
+	// Setup RNG on Device
+	// NOTE - CUDA RNG is not going to work with OCCA - so we're going to revert
+	// to the standard linear congruential generation algorithm while preserving
+	// the limited state streams concept (i.e., # RNG states << # GPU threads)
+	printf("Setting up RNG...\n");
+	unsigned long * RNG_states_h = (unsigned long *) malloc( I.streams * sizeof(unsigned long));
+	unsigned long * RNG_states;
+	// Init states to something
+	unsigned long time_of_exec = time(NULL);
+	for( int i = 0; i < I.streams; i++ )
+		RNG_states_h[i] = time_of_exec + i + 1;
+	CUDA_CALL( cudaMalloc((void **)&RNG_states, I.streams * sizeof(unsigned long)) );
+	CUDA_CALL( cudaMemcpy(RNG_states, RNG_states_h, I.streams * sizeof(unsigned long), cudaMemcpyHostToDevice));
+	free(RNG_states_h); // as we don't need host states anymore
 	cudaDeviceSynchronize();
 
 	// Allocate Some Flux State vectors to randomly pick from

@@ -1,16 +1,8 @@
 #include "SimpleMOC-kernel_header.h"
 
-__global__ void setup_kernel(curandState *state, Input I)
-{
-	int threadId = blockIdx.x *blockDim.x + threadIdx.x;
-	if( threadId >= I.streams)
-		return;
-	curand_init(1234, threadId, 0, &state[threadId]);
-}
-
 // Initialize global flux states to random numbers on device
 // Slow, poor use of GPU, but fine since it's just initialization code
-__global__ void	init_flux_states( float * flux_states, int N_flux_states, Input I, curandState * state)
+__global__ void	init_flux_states( float * flux_states, int N_flux_states, Input I, unsigned long * state)
 {
 	int blockId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment	
 	//int threadId = blockId * blockDim.x + threadIdx.x; // energy group
@@ -19,11 +11,14 @@ __global__ void	init_flux_states( float * flux_states, int N_flux_states, Input 
 		return;
 
 	// Assign RNG state
-	curandState * localState = &state[blockId % I.streams];
+	unsigned long * localState = &state[blockId % I.streams];
 
 	if( threadIdx.x == 0 )
 		for( int i = 0; i < I.egroups; i++ )
-			flux_states[blockId +i] = curand_uniform(localState);
+		{
+			LCG_RNG(localState); // update state to next in sequence
+			flux_states[blockId +i] = (double) *localState / 2147483647;
+		}
 }
 
 // Gets I from user and sets defaults

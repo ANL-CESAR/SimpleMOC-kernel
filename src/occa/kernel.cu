@@ -4,13 +4,10 @@
  * block be a geometrical segment, with each thread within the
  * block represent a single energy phase. On the CPU, the
  * inner SIMD-ized loop is over energy (i.e, 100 energy groups).
- * This should allow for each BLOCK to have:
- * 		- A single state variable for the RNG
- * 		- A set of __shared__ SIMD vectors, each thread id being its idx
  */
 
 __global__ void run_kernel( Input I, Source * S,
-		Source_Arrays SA, Table * table, curandState * state,
+		Source_Arrays SA, Table * table, unsigned long * state,
 		float * state_fluxes, int N_state_fluxes)
 {
 	int blockId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment	
@@ -38,7 +35,7 @@ __global__ void run_kernel( Input I, Source * S,
 	float t4           ;
 
 	// Assign RNG state
-	curandState * localState = &state[blockId % I.streams];
+	unsigned long * localState = &state[blockId % I.streams];
 
 	// Randomized variables (common accross all thread within block)
 	__shared__ int state_flux_id;
@@ -49,18 +46,27 @@ __global__ void run_kernel( Input I, Source * S,
 	// (We are not concerned with coherency here as in actual
 	// program threads would be organized in a more specific order)
 	if( threadIdx.x == 0 )
-		state_flux_id = curand(localState) % N_state_fluxes;
+	{
+		LCG_RNG(localState); // update state to next in sequence
+		state_flux_id = *localState % N_state_fluxes;
+	}
 
 	__syncthreads();
 	float * state_flux = &state_fluxes[state_flux_id];
 
 	// Pick Random QSR
 	if( threadIdx.x == 0 )
-		QSR_id = curand(localState) % I.source_regions;
+	{
+		LCG_RNG(localState); // update state to next in sequence
+		QSR_id = *localState % I.source_regions;
+	}
 
 	// Pick Random Fine Axial Interval
 	if( threadIdx.x == 0 )
-		FAI_id = curand(localState) % I.fine_axial_intervals;
+	{
+		LCG_RNG(localState); // update state to next in sequence
+		FAI_id = *localState % I.fine_axial_intervals;
+	}
 
 	__syncthreads();
 
@@ -198,4 +204,13 @@ __device__ void interpolateTable(Table * table, float x, float * out)
 		float val = slope * x + intercept;
 		*out = val;
 	}
+}
+
+__device__ void LCG_RNG( unsigned long * state )
+{
+	unsigned long n1;
+	unsigned long a = 16807;
+	unsigned long m = 2147483647;
+	n1 = ( a * (*state) ) % m;
+	*state = n1;
 }
