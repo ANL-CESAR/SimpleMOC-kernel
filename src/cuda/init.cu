@@ -35,8 +35,9 @@ Input set_default_input( void )
 	I.course_axial_intervals = 9;
 	I.fine_axial_intervals = 5;
 	I.segments = 50000000;
-	I.egroups = 100;
+	I.egroups = 128;
 	I.streams = 10000;
+	I.seg_per_thread = 100;
 
 	return I;
 }

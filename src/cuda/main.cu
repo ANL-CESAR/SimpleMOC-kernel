@@ -68,10 +68,20 @@ int main( int argc, char * argv[] )
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
 	float time = 0;
+	
+	// Setup kernel call block parameters
+	assert( I.segments % I.seg_per_thread == 0 );
+	n_blocks = sqrt(I.segments / I.seg_per_thread);
+	dim3 blocks_k(n_blocks, n_blocks);
+	if( blocks_k.x * blocks_k.y < I.segments / I.seg_per_thread )
+		blocks_k.x++;
+	if( blocks_k.x * blocks_k.y < I.segments / I.seg_per_thread )
+		blocks_k.y++;
+	assert( blocks_k.x * blocks_k.y >= I.segments / I.seg_per_thread );
 
 	// Run Simulation Kernel Loop
 	cudaEventRecord(start, 0);
-	run_kernel <<< blocks, I.egroups >>> (I, sources_d, SA_d, table_d, 
+	run_kernel <<< blocks_k, I.egroups, I.seg_per_thread * 3 *sizeof(int) >>> (I, sources_d, SA_d, table_d, 
 			RNG_states, flux_states, N_flux_states);
 	CudaCheckError();
 	cudaEventRecord(stop, 0);

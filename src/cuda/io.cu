@@ -85,6 +85,7 @@ void print_input_summary(Input I)
 	printf("%-25s%d\n", "Fine Axial Intervals:", I.fine_axial_intervals);
 	printf("%-25s", "Segments:"); fancy_int(I.segments);
 	printf("%-25s", "Random Number Streams:"); fancy_int(I.streams);
+	printf("%-25s%d\n", "Segments per CUDA block:", I.seg_per_thread);
 	border_print();
 }
 
@@ -129,6 +130,14 @@ void read_CLI( int argc, char * argv[], Input * input )
 			else
 				print_CLI_error();
 		}
+		// segments per thread (-p)
+		else if( strcmp(arg, "-p") == 0 )
+		{
+			if( ++i < argc )
+				input->seg_per_thread = atoi(argv[i]);
+			else
+				print_CLI_error();
+		}
 
 		else
 			print_CLI_error();
@@ -146,9 +155,10 @@ void print_CLI_error(void)
 {
 	printf("Usage: ./SimpleMOC <options>\n");
 	printf("Options include:\n");
-	printf("  -t <threads>        Number of OpenMP threads to run\n");
-	printf("  -s <segments>       Number of segments to process\n");
-	printf("  -e <energy groups>  Number of energy groups\n");
+	printf("  -t <threads>          Number of OpenMP threads to run\n");
+	printf("  -s <segments>         Number of segments to process\n");
+	printf("  -e <energy groups>    Number of energy groups\n");
+	printf("  -p <segs per thread>  Number of segments per CUDA Block\n");
 	printf("See readme for full description of default run values\n");
 	exit(1);
 }

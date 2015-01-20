@@ -34,6 +34,7 @@ typedef struct{
 	int egroups;
 	int nthreads;
 	int streams;
+	int seg_per_thread;
 } Input;
 
 // Source Region Structure

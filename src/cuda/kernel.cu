@@ -15,8 +15,14 @@ __global__ void run_kernel( Input I, Source * S,
 {
 	int blockId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment	
 
-	if( blockId >= I.segments )
+	if( blockId >= I.segments / I.seg_per_thread )
 		return;
+
+	// Assign RNG state
+	curandState * localState = &state[blockId % I.streams];
+
+	blockId *= I.seg_per_thread;
+	blockId--;
 
 	int g = threadIdx.x; // Each energy group (g) is one thread in a block
 
@@ -37,149 +43,151 @@ __global__ void run_kernel( Input I, Source * S,
 	float t3           ;
 	float t4           ;
 
-	// Assign RNG state
-	curandState * localState = &state[blockId % I.streams];
-
 	// Randomized variables (common accross all thread within block)
-	__shared__ int state_flux_id;
-	__shared__ int QSR_id;
-	__shared__ int FAI_id;
+	extern __shared__ int shm[];
+	int * state_flux_id = &shm[0];
+	int * QSR_id = &shm[I.seg_per_thread];
+	int * FAI_id = &shm[I.seg_per_thread * 2];
 
-	// Find State Flux Vector in global memory
-	// (We are not concerned with coherency here as in actual
-	// program threads would be organized in a more specific order)
 	if( threadIdx.x == 0 )
-		state_flux_id = curand(localState) % N_state_fluxes;
-
-	__syncthreads();
-	float * state_flux = &state_fluxes[state_flux_id];
-
-	// Pick Random QSR
-	if( threadIdx.x == 0 )
-		QSR_id = curand(localState) % I.source_regions;
-
-	// Pick Random Fine Axial Interval
-	if( threadIdx.x == 0 )
-		FAI_id = curand(localState) % I.fine_axial_intervals;
+	{
+		for( int i = 0; i < I.seg_per_thread; i++ )
+		{
+			state_flux_id[i] = curand(localState) % N_state_fluxes;
+			QSR_id[i] = curand(localState) % I.source_regions;
+			FAI_id[i] = curand(localState) % I.fine_axial_intervals;
+		}
+	}
 
 	__syncthreads();
 
-	//////////////////////////////////////////////////////////
-	// Attenuate Segment
-	//////////////////////////////////////////////////////////
-
-	// Some placeholder constants - In the full app some of these are
-	// calculated based off position in geometry. This treatment
-	// shaves off a few FLOPS, but is not significant compared to the
-	// rest of the function.
-	float dz = 0.1f;
-	float zin = 0.3f; 
-	float weight = 0.5f;
-	float mu = 0.9f;
-	float mu2 = 0.3f;
-	float ds = 0.7f;
-
-	const int egroups = I.egroups;
-
-	// load fine source region flux vector
-	float * FSR_flux = &SA.fine_flux_arr[ S[QSR_id].fine_flux_id + FAI_id * egroups];
-
-	if( FAI_id == 0 )
+	for( int i = 0; i < I.seg_per_thread; i++ )
 	{
-		float * f2 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
-		float * f3 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
-		// cycle over energy groups
-		// load neighboring sources
-		float y2 = f2[g];
-		float y3 = f3[g];
+		blockId++;
 
-		// do linear "fitting"
-		float c0 = y2;
-		float c1 = (y3 - y2) / dz;
+		float * state_flux = &state_fluxes[state_flux_id[i]];
 
-		// calculate q0, q1, q2
-		q0 = c0 + c1*zin;
-		q1 = c1;
-		q2 = 0;
+
+		__syncthreads();
+
+		//////////////////////////////////////////////////////////
+		// Attenuate Segment
+		//////////////////////////////////////////////////////////
+
+		// Some placeholder constants - In the full app some of these are
+		// calculated based off position in geometry. This treatment
+		// shaves off a few FLOPS, but is not significant compared to the
+		// rest of the function.
+		float dz = 0.1f;
+		float zin = 0.3f; 
+		float weight = 0.5f;
+		float mu = 0.9f;
+		float mu2 = 0.3f;
+		float ds = 0.7f;
+
+		const int egroups = I.egroups;
+
+		// load fine source region flux vector
+		float * FSR_flux = &SA.fine_flux_arr[ S[QSR_id[i]].fine_flux_id + FAI_id[i] * egroups];
+
+		if( FAI_id[i] == 0 )
+		{
+			float * f2 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i])*egroups];
+			float * f3 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i]+1)*egroups];
+			// cycle over energy groups
+			// load neighboring sources
+			float y2 = f2[g];
+			float y3 = f3[g];
+
+			// do linear "fitting"
+			float c0 = y2;
+			float c1 = (y3 - y2) / dz;
+
+			// calculate q0, q1, q2
+			q0 = c0 + c1*zin;
+			q1 = c1;
+			q2 = 0;
+		}
+		else if ( FAI_id[i] == I.fine_axial_intervals - 1 )
+		{
+			float * f1 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i]-1)*egroups];
+			float * f2 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i])*egroups];
+			// cycle over energy groups
+			// load neighboring sources
+			float y1 = f1[g];
+			float y2 = f2[g];
+
+			// do linear "fitting"
+			float c0 = y2;
+			float c1 = (y2 - y1) / dz;
+
+			// calculate q0, q1, q2
+			q0 = c0 + c1*zin;
+			q1 = c1;
+			q2 = 0;
+		}
+		else
+		{
+			float * f1 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i]-1)*egroups];
+			float * f2 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i])*egroups];
+			float * f3 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i]+1)*egroups];
+			// cycle over energy groups
+			// load neighboring sources
+			float y1 = f1[g]; 
+			float y2 = f2[g];
+			float y3 = f3[g];
+
+			// do quadratic "fitting"
+			float c0 = y2;
+			float c1 = (y1 - y3) / (2.f*dz);
+			float c2 = (y1 - 2.f*y2 + y3) / (2.f*dz*dz);
+
+			// calculate q0, q1, q2
+			q0 = c0 + c1*zin + c2*zin*zin;
+			q1 = c1 + 2.f*c2*zin;
+			q2 = c2;
+		}
+
+		// load total cross section
+		sigT = SA.sigT_arr[ S[QSR_id[i]].sigT_id + g];
+
+		// calculate common values for efficiency
+		tau = sigT * ds;
+		sigT2 = sigT * sigT;
+
+		interpolateTable( table, tau, &expVal );  
+
+		// Flux Integral
+
+		// Re-used Term
+		reuse = tau * (tau - 2.f) + 2.f * expVal
+			/ (sigT * sigT2); 
+
+		// add contribution to new source flux
+		flux_integral = (q0 * tau + (sigT * state_flux[g] - q0)
+				* expVal) / sigT2 + q1 * mu * reuse + q2 * mu2 
+			* (tau * (tau * (tau - 3.f) + 6.f) - 6.f * expVal) 
+			/ (3.f * sigT2 * sigT2);
+
+		// Prepare tally
+		tally = weight * flux_integral;
+
+		// SHOULD BE ATOMIC HERE!
+		//FSR_flux[g] += tally;
+		atomicAdd(&FSR_flux[g], (float) tally);
+
+		// Term 1
+		t1 = q0 * expVal / sigT;  
+		// Term 2
+		t2 = q1 * mu * (tau - expVal) / sigT2; 
+		// Term 3
+		t3 =	q2 * mu2 * reuse;
+		// Term 4
+		t4 = state_flux[g] * (1.f - expVal);
+		// Total psi
+		state_flux[g] = t1 + t2 + t3 + t4;
+
 	}
-	else if ( FAI_id == I.fine_axial_intervals - 1 )
-	{
-		float * f1 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
-		float * f2 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
-		// cycle over energy groups
-		// load neighboring sources
-		float y1 = f1[g];
-		float y2 = f2[g];
-
-		// do linear "fitting"
-		float c0 = y2;
-		float c1 = (y2 - y1) / dz;
-
-		// calculate q0, q1, q2
-		q0 = c0 + c1*zin;
-		q1 = c1;
-		q2 = 0;
-	}
-	else
-	{
-		float * f1 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
-		float * f2 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
-		float * f3 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
-		// cycle over energy groups
-		// load neighboring sources
-		float y1 = f1[g]; 
-		float y2 = f2[g];
-		float y3 = f3[g];
-
-		// do quadratic "fitting"
-		float c0 = y2;
-		float c1 = (y1 - y3) / (2.f*dz);
-		float c2 = (y1 - 2.f*y2 + y3) / (2.f*dz*dz);
-
-		// calculate q0, q1, q2
-		q0 = c0 + c1*zin + c2*zin*zin;
-		q1 = c1 + 2.f*c2*zin;
-		q2 = c2;
-	}
-
-	// load total cross section
-	sigT = SA.sigT_arr[ S[QSR_id].sigT_id + g];
-
-	// calculate common values for efficiency
-	tau = sigT * ds;
-	sigT2 = sigT * sigT;
-
-	interpolateTable( table, tau, &expVal );  
-
-	// Flux Integral
-
-	// Re-used Term
-	reuse = tau * (tau - 2.f) + 2.f * expVal
-		/ (sigT * sigT2); 
-
-	// add contribution to new source flux
-	flux_integral = (q0 * tau + (sigT * state_flux[g] - q0)
-			* expVal) / sigT2 + q1 * mu * reuse + q2 * mu2 
-		* (tau * (tau * (tau - 3.f) + 6.f) - 6.f * expVal) 
-		/ (3.f * sigT2 * sigT2);
-
-	// Prepare tally
-	tally = weight * flux_integral;
-
-	// SHOULD BE ATOMIC HERE!
-	//FSR_flux[g] += tally;
-	atomicAdd(&FSR_flux[g], (float) tally);
-
-	// Term 1
-	t1 = q0 * expVal / sigT;  
-	// Term 2
-	t2 = q1 * mu * (tau - expVal) / sigT2; 
-	// Term 3
-	t3 =	q2 * mu2 * reuse;
-	// Term 4
-	t4 = state_flux[g] * (1.f - expVal);
-	// Total psi
-	state_flux[g] = t1 + t2 + t3 + t4;
 }	
 
 /* Interpolates a formed exponential table to compute ( 1- exp(-x) )
