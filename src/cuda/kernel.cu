@@ -9,9 +9,9 @@
  * 		- A set of __shared__ SIMD vectors, each thread id being its idx
  */
 
-__global__ void run_kernel( Input I, Source * S,
-		Source_Arrays SA, Table * table, curandState * state,
-		float * state_fluxes, int N_state_fluxes)
+__global__ void run_kernel( Input I, Source *  S,
+		Source_Arrays SA, Table *  table, curandState *  state,
+		float *  state_fluxes, int N_state_fluxes)
 {
 	int blockId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment	
 
@@ -19,7 +19,7 @@ __global__ void run_kernel( Input I, Source * S,
 		return;
 
 	// Assign RNG state
-	curandState * localState = &state[blockId % I.streams];
+	curandState *  localState = &state[blockId % I.streams];
 
 	blockId *= I.seg_per_thread;
 	blockId--;
@@ -45,9 +45,9 @@ __global__ void run_kernel( Input I, Source * S,
 
 	// Randomized variables (common accross all thread within block)
 	extern __shared__ int shm[];
-	int * state_flux_id = &shm[0];
-	int * QSR_id = &shm[I.seg_per_thread];
-	int * FAI_id = &shm[I.seg_per_thread * 2];
+	int *  state_flux_id = &shm[0];
+	int *  QSR_id = &shm[I.seg_per_thread];
+	int *  FAI_id = &shm[I.seg_per_thread * 2];
 
 	if( threadIdx.x == 0 )
 	{
@@ -65,7 +65,7 @@ __global__ void run_kernel( Input I, Source * S,
 	{
 		blockId++;
 
-		float * state_flux = &state_fluxes[state_flux_id[i]];
+		float *  state_flux = &state_fluxes[state_flux_id[i]];
 
 
 		__syncthreads();
@@ -88,12 +88,12 @@ __global__ void run_kernel( Input I, Source * S,
 		const int egroups = I.egroups;
 
 		// load fine source region flux vector
-		float * FSR_flux = &SA.fine_flux_arr[ S[QSR_id[i]].fine_flux_id + FAI_id[i] * egroups];
+		float *  FSR_flux = &SA.fine_flux_arr[ S[QSR_id[i]].fine_flux_id + FAI_id[i] * egroups];
 
 		if( FAI_id[i] == 0 )
 		{
-			float * f2 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i])*egroups];
-			float * f3 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i]+1)*egroups];
+			float *   f2 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i])*egroups];
+			float *   f3 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i]+1)*egroups];
 			// cycle over energy groups
 			// load neighboring sources
 			float y2 = __ldg(&f2[g]);
@@ -110,8 +110,8 @@ __global__ void run_kernel( Input I, Source * S,
 		}
 		else if ( FAI_id[i] == I.fine_axial_intervals - 1 )
 		{
-			float * f1 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i]-1)*egroups];
-			float * f2 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i])*egroups];
+			float *   f1 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i]-1)*egroups];
+			float *   f2 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i])*egroups];
 			// cycle over energy groups
 			// load neighboring sources
 			float y1 = __ldg(&f1[g]);
@@ -128,9 +128,9 @@ __global__ void run_kernel( Input I, Source * S,
 		}
 		else
 		{
-			float * f1 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i]-1)*egroups];
-			float * f2 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i])*egroups];
-			float * f3 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i]+1)*egroups];
+			float *   f1 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i]-1)*egroups];
+			float *   f2 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i])*egroups];
+			float *   f3 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i]+1)*egroups];
 			// cycle over energy groups
 			// load neighboring sources
 			float y1 = __ldg(&f1[g]); 
@@ -164,7 +164,7 @@ __global__ void run_kernel( Input I, Source * S,
 			/ (sigT * sigT2); 
 
 		// add contribution to new source flux
-		flux_integral = (q0 * tau + (sigT * state_flux[g] - q0)
+		flux_integral = (q0 * tau + (sigT * __ldg(&state_flux[g]) - q0)
 				* expVal) / sigT2 + q1 * mu * reuse + q2 * mu2 
 			* (tau * (tau * (tau - 3.f) + 6.f) - 6.f * expVal) 
 			/ (3.f * sigT2 * sigT2);
@@ -192,7 +192,7 @@ __global__ void run_kernel( Input I, Source * S,
 
 /* Interpolates a formed exponential table to compute ( 1- exp(-x) )
  *  at the desired x value */
-__device__ void interpolateTable(Table * table, float x, float * out)
+__device__ void interpolateTable(Table *  table, float x, float *  out)
 {
 	// check to ensure value is in domain
 	if( x > table->maxVal )

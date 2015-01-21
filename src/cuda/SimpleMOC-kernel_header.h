@@ -60,10 +60,10 @@ typedef struct{
 } Table;
 
 // kernel.c
-__global__ void run_kernel( Input I, Source * S,
-		Source_Arrays SA, Table * table, curandState * state,
-		float * state_fluxes, int N_state_fluxes);
-__device__ void interpolateTable(Table * table, float x, float * out);
+__global__ void run_kernel( Input I, Source *  S,
+		Source_Arrays SA, Table *  table, curandState *  state,
+		float *  state_fluxes, int N_state_fluxes);
+__device__ void interpolateTable(Table *  table, float x, float *  out);
 
 // init.c
 double mem_estimate( Input I );
