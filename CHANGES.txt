@@ -17,6 +17,10 @@ NEW IN VERSION 2
   particular system. This option is altered using the "-p" command line option
   on the CUDA version (defaults to 100).
 
+- Exponential Table lookup has been disabled by default. It was found that
+  on most architectures, it's actually faster to just do the EXP call than
+  it is to have to read from memory.
+
 ===============================================================================
 NEW IN VERSION 1
 ===============================================================================

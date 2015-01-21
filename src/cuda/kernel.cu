@@ -155,7 +155,8 @@ __global__ void run_kernel( Input I, Source *  S,
 		tau = sigT * ds;
 		sigT2 = sigT * sigT;
 
-		interpolateTable( table, tau, &expVal );  
+		//interpolateTable( table, tau, &expVal );  
+		expVal = 1.f - exp( -tau); // EXP function is fater than table lookup
 
 		// Flux Integral
 

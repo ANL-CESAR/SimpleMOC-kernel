@@ -214,7 +214,10 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#pragma vector_level(10)
 	#endif
 	for( int g = 0; g < egroups; g++)
-		expVal[g] = interpolateTable( table, tau[g] );  
+	{
+		//expVal[g] = interpolateTable( table, tau[g] );  
+		expVal[g] = 1.f - exp( -tau[g] ); // exp is faster on many architectures
+	}
 
 	// Flux Integral
 
