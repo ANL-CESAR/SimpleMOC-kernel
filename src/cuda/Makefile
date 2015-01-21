@@ -6,7 +6,6 @@ COMPILER    = nvcc
 OPTIMIZE    = yes
 DEBUG       = no
 PROFILE     = no
-BENCHMARK   = no
 
 #===============================================================================
 # Program name & source code list

@@ -8,7 +8,6 @@ OPTIMIZE    = yes
 DEBUG       = no
 PROFILE     = no
 PAPI        = no
-BENCHMARK   = no
 MIC         = no
 
 #===============================================================================

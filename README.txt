@@ -15,7 +15,7 @@
                           |_|\_\___|_|  |_| |_|\___|_|
 
 
-                                   Version 1
+                                   Version 2
 
 ==============================================================================
 Contact Information
@@ -105,12 +105,24 @@ Running SimpleMOC-kernel-------------------------------------------------------
 	For non-default settings, SimpleMOC-kernel supports the following
 	command line options:
 
+	< CPU Version >
+
 	Usage: ./SimpleMOC-kernel <options>
 	Options include:
 	  -t <threads>        Number of OpenMP threads to run
 	  -s <segments>       Number of segments to process
 	  -e <energy groups>  Number of energy groups
 	  -p <PAPI event>     PAPI event name to count (1 only)
+
+	< GPU Version >
+
+	Usage: ./SimpleMOC-kernel <options>
+	Options include:
+	  -t <threads>          Number of OpenMP threads to run
+	  -s <segments>         Number of segments to process
+	  -e <energy groups>    Number of energy groups
+	  -p <segs per thread>  Number of segments per CUDA Block
+	
 
 	If not options are specified, then a default set of parameters will
 	automatically be run. These parameters reflect the approximate per node
@@ -123,27 +135,30 @@ Advanced Compilation, Debugging, Optimization, and Profiling
 ==============================================================================
 
 There are a number of switches that can be set at the top of the makefile
-to enable MPI and OpenMP parallelism, along with more advanced compilation
+to enable OpenMP parallelism, along with more advanced compilation
 features.
 
 Here is a sample of the control panel at the top of the makefile:
 
-COMPILER    = gnu
-OPENMP      = no
+< CPU Version >
+
+COMPILER    = intel
+OPENMP      = yes
 OPTIMIZE    = yes
 DEBUG       = no
 PROFILE     = no
 PAPI        = no
+MIC         = no
 
 Explanation of Flags:
 
-COMPILER <gnu, intel, ibm> - This selects your compiler.
+COMPILER <gnu, intel> - This selects your compiler.
 
 OpenMP - Enables OpenMP support in the code. By default, the code will
          run using the maximum number of threads on the system, unless
          otherwise specified with the "-t" command line argument.
 
-OPTIMIZE - Adds compiler optimization flag "-O3".
+OPTIMIZE - Adds compiler optimization flag "-O3" and other optimizations
 
 DEBUG - Adds the compiler flag "-g".
 
@@ -152,6 +167,25 @@ PROFILE - Adds the compiler flag "-pg".
 PAPI - Enables PAPI support in the code. You may need to alter the makefile
        or your environment to ensure proper linking with the PAPI library.
        See PAPI section below for more details.
+
+MIC -  Enables Intel Xeon Phi (MIC) native mode compilation.
+
+< GPU Version >
+
+COMPILER    = nvcc
+OPTIMIZE    = yes
+DEBUG       = no
+PROFILE     = no
+
+Explanation of Flags:
+
+COMPILER <nvcc> - This selects your compiler (Nvidia is only one supported).
+
+OPTIMIZE - Adds compiler optimization flag "-O3" and other optimizations.
+
+DEBUG - Adds the compiler flag "-g".
+
+PROFILE - Adds the compiler flag "-pg".
 
 ===============================================================================
 SimpleMOC-kernel Strawman Reactor Defintion

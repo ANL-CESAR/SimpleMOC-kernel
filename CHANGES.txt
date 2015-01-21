@@ -1,4 +1,23 @@
 ===============================================================================
+NEW IN VERSION 2
+===============================================================================
+- CUDA code has been optimized significantly.
+
+- Default inputs for all version now use 128 energy groups (rather than the
+  prior 100 energy groups). This is done as 128 is a multiple of 32, making
+  for more efficient use of SIMD vectors. This is an acceptable change because
+  a moderate increase in energy groups increases the fidelity of a real world
+  calculation and would not cost an unnecessarily large increase in wall time
+  given the potential gains in SIMD vector efficiency.
+
+- Some documentation has been cleaned up.
+
+- Added the option in the CUDA code to vary the number of segments per CUDA
+  block. This can be used to test the most efficient configuration for a 
+  particular system. This option is altered using the "-p" command line option
+  on the CUDA version (defaults to 100).
+
+===============================================================================
 NEW IN VERSION 1
 ===============================================================================
 - The code has been ported to CUDA. The repository is now split up into two
