@@ -96,8 +96,8 @@ __global__ void run_kernel( Input I, Source * S,
 			float * f3 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i]+1)*egroups];
 			// cycle over energy groups
 			// load neighboring sources
-			float y2 = f2[g];
-			float y3 = f3[g];
+			float y2 = __ldg(&f2[g]);
+			float y3 = __ldg(&f3[g]);
 
 			// do linear "fitting"
 			float c0 = y2;
@@ -114,8 +114,8 @@ __global__ void run_kernel( Input I, Source * S,
 			float * f2 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i])*egroups];
 			// cycle over energy groups
 			// load neighboring sources
-			float y1 = f1[g];
-			float y2 = f2[g];
+			float y1 = __ldg(&f1[g]);
+			float y2 = __ldg(&f2[g]);
 
 			// do linear "fitting"
 			float c0 = y2;
@@ -133,9 +133,9 @@ __global__ void run_kernel( Input I, Source * S,
 			float * f3 = &SA.fine_source_arr[ S[QSR_id[i]].fine_source_id + (FAI_id[i]+1)*egroups];
 			// cycle over energy groups
 			// load neighboring sources
-			float y1 = f1[g]; 
-			float y2 = f2[g];
-			float y3 = f3[g];
+			float y1 = __ldg(&f1[g]); 
+			float y2 = __ldg(&f2[g]);
+			float y3 = __ldg(&f3[g]);
 
 			// do quadratic "fitting"
 			float c0 = y2;
@@ -149,7 +149,7 @@ __global__ void run_kernel( Input I, Source * S,
 		}
 
 		// load total cross section
-		sigT = SA.sigT_arr[ S[QSR_id[i]].sigT_id + g];
+		sigT = __ldg(&SA.sigT_arr[ S[QSR_id[i]].sigT_id + g]);
 
 		// calculate common values for efficiency
 		tau = sigT * ds;
