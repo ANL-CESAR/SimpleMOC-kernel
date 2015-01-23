@@ -36,6 +36,15 @@ typedef struct{
   int N;
 } Table;
 
+occaFunction void LCG_RNG( unsigned long * state )
+{
+	unsigned long n1;
+	unsigned long a = 16807;
+	unsigned long m = 2147483647;
+	n1 = ( a * (*state) ) % m;
+	*state = n1;
+}
+
 /* Interpolates a formed exponential table to compute ( 1- exp(-x) )
  *  at the desired x value */
 occaFunction void interpolateTable(
@@ -66,13 +75,13 @@ occaFunction void interpolateTable(
  * 		- A set of __shared__ SIMD vectors, each thread id being its idx
  */
 
-occaKernel void run_kernel( 
+__global__ void run_kernel( 
     Input I, 
     Source * S,
-    Source_Arrays SA,    // Split this up into the three components
+		Source_Arrays SA, // May need to split this into two components
     Table * table, 
-    curandState * state, // Should replace this for non-CUDA RNG
-    float * state_fluxes, 
+    unsigned long * state,
+		float * state_fluxes, 
     int N_state_fluxes)
 {
 
@@ -123,7 +132,10 @@ occaKernel void run_kernel(
         // (We are not concerned with coherency here as in actual
         // program threads would be organized in a more specific order)
         if( innerId0 == 0 )
-          state_flux_id = curand(localState) % N_state_fluxes;
+        {
+          LCG_RNG(localState); // update state to next in sequence
+          state_flux_id = *localState % N_state_fluxes;
+        }
 
         barrier(localMemFence);
 
@@ -131,11 +143,17 @@ occaKernel void run_kernel(
 
         // Pick Random QSR
         if( innerId0 == 0 )
-          QSR_id = curand(localState) % I.source_regions;
+        {
+          LCG_RNG(localState); // update state to next in sequence
+          QSR_id = *localState % I.source_regions;
+        }
 
         // Pick Random Fine Axial Interval
         if( innerId0 == 0 )
-          FAI_id = curand(localState) % I.fine_axial_intervals;
+        {
+          LCG_RNG(localState); // update state to next in sequence
+          FAI_id = *localState % I.fine_axial_intervals;
+        }
 
         barrier(localMemFence);
 
@@ -243,7 +261,7 @@ occaKernel void run_kernel(
 
         // SHOULD BE ATOMIC HERE!
         //FSR_flux[g] += tally;
-        atomicAdd(&FSR_flux[g], (float) tally);
+        occaAtomicAdd(&FSR_flux[g], (float) tally);
 
         // Term 1
         t1 = q0 * expVal / sigT;  

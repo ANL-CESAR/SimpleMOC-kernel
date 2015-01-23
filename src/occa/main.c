@@ -16,12 +16,31 @@ int main( int argc, char * argv[] )
 	center_print("INITIALIZATION", 79);
 	border_print();
 
+	// Setup CUDA blocks / threads
+	// int n_blocks = sqrt(I.segments);
+	// dim3 blocks(n_blocks, n_blocks);
+	// if( blocks.x * blocks.y < I.segments )
+	// 	blocks.x++;
+	// if( blocks.x * blocks.y < I.segments )
+	// 	blocks.y++;
+	// assert( blocks.x * blocks.y >= I.segments );
+
+	// Setup OCCA device and info
+  int outer_dim = sqrt(I.segments);
+  int inner_dim = I.egroups;
+  occaDevice device;
+  occaKernelInfo kinfo = occaGenKernelInfo();
+  occaKernelInfoAddDefine(lookupInfo, "outer_dim0", occaLong(outer_dim));
+  occaKernelInfoAddDefine(lookupInfo, "outer_dim1", occaLong(outer_dim));
+  occaKernelInfoAddDefine(lookupInfo, "inner_dim", occaLong(inner_dim));
+
 	// Build Source Data
 	printf("Building Source Data Arrays...\n");
-	Source_Arrays SA_h, SA_d;
+	Source_Arrays SA_h; 
+  OCCA_Source_Arrays SA_d;
 	Source * sources_h = initialize_sources(I, &SA_h); 
-	Source * sources_d = initialize_device_sources( I, &SA_h, &SA_d, sources_h); 
-	cudaDeviceSynchronize();
+	occaMemory sources_d = initialize_occa_sources( I, &SA_h, &SA_d, sources_h, device); 
+  device.finish()
 	
 	// Build Exponential Table
 	printf("Building Exponential Table...\n");
@@ -29,15 +48,6 @@ int main( int argc, char * argv[] )
 	Table * table_d;
 	CUDA_CALL( cudaMalloc((void **) &table_d, sizeof(Table)) );
 	CUDA_CALL( cudaMemcpy(table_d, &table, sizeof(Table), cudaMemcpyHostToDevice) );
-
-	// Setup CUDA blocks / threads
-	int n_blocks = sqrt(I.segments);
-	dim3 blocks(n_blocks, n_blocks);
-	if( blocks.x * blocks.y < I.segments )
-		blocks.x++;
-	if( blocks.x * blocks.y < I.segments )
-		blocks.y++;
-	assert( blocks.x * blocks.y >= I.segments );
 
 	// Setup RNG on Device
 	// NOTE - CUDA RNG is not going to work with OCCA - so we're going to revert

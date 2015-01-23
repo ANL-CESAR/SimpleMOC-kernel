@@ -95,26 +95,22 @@ Source * initialize_sources( Input I, Source_Arrays * SA )
 	return sources;
 }
 
-Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays * SA_d, Source * sources_h )
+occaMemory initialize_occa_sources( Input I, Source_Arrays * SA_h, OCCA_Source_Arrays * SA_d, Source * sources_h, occaDevice device )
 {
 	// Allocate & Copy Fine Source Data
 	long N_fine = I.source_regions * I.fine_axial_intervals * I.egroups;
-	cudaMalloc((void **) &SA_d->fine_source_arr, N_fine * sizeof(float));
-	cudaMemcpy(SA_d->fine_source_arr, SA_h->fine_source_arr, N_fine * sizeof(float), cudaMemcpyHostToDevice);
+  SA_d->fine_source_arr = occaDeviceMalloc(device, N_fine * sizeof(float), SA_h->fine_source_arr)
 
 	// Allocate & Copy Fine Flux Data
-	cudaMalloc((void **) &SA_d->fine_flux_arr, N_fine * sizeof(float));
-	cudaMemcpy(SA_d->fine_flux_arr, SA_h->fine_flux_arr, N_fine * sizeof(float), cudaMemcpyHostToDevice);
+  SA_d->fine_flux_arr = occaDeviceMalloc(device, N_fine * sizeof(float), SA_h->fine_flux_arr);
 
 	// Allocate & Copy SigT Data
 	long N_sigT = I.source_regions * I.egroups;
-	cudaMalloc((void **) &SA_d->sigT_arr, N_sigT * sizeof(float));
-	cudaMemcpy(SA_d->sigT_arr, SA_h->sigT_arr, N_sigT * sizeof(float), cudaMemcpyHostToDevice);
+  SA_d->sigT_arr = occaDeviceMalloc(device, N_sigT * sizeof(float), SA_h->sigT_arr);
 
 	// Allocate & Copy Source Array Data
-	Source * sources_d;
-	cudaMalloc((void **) &sources_d, I.source_regions * sizeof(Source));
-	cudaMemcpy(sources_d, sources_h, I.source_regions * sizeof(Source), cudaMemcpyHostToDevice);
+	occaMemory sources_d;
+  sources_d = occaDeviceMalloc(device, I.source_regions * sizeof(Source), sources_h);
 
 	return sources_d;
 }

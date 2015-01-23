@@ -49,6 +49,13 @@ typedef struct{
 	float * sigT_arr;
 } Source_Arrays;
 
+// Device Source Arrays
+typedef struct{
+	occaMemory fine_flux_arr;
+	occaMemory fine_source_arr;
+	occaMemory sigT_arr;
+} OCCA_Source_Arrays;
+
 // Table structure for computing exponential
 typedef struct{
 	float values[706];
@@ -68,7 +75,7 @@ __device__ void LCG_RNG( unsigned long * state );
 double mem_estimate( Input I );
 __global__ void	init_flux_states( float * flux_states, int N_flux_states, Input I, unsigned long * state);
 Source * initialize_sources( Input I, Source_Arrays * SA );
-Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays * SA_d, Source * sources_h );
+occaMemory initialize_occa_sources( Input I, Source_Arrays * SA_h, OCCA_Source_Arrays * SA_d, Source * sources_h, occaDevice device );
 Table buildExponentialTable( void );
 Input set_default_input( void );
 void __cudaCheckError( const char *file, const int line );
