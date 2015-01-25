@@ -75,13 +75,13 @@ occaFunction void interpolateTable(
  * 		- A set of __shared__ SIMD vectors, each thread id being its idx
  */
 
-__global__ void run_kernel( 
+occaKernle void run_kernel( 
     Input I, 
     Source * S,
-		Source_Arrays SA, // May need to split this into two components
+    Source_Arrays SA, // May need to split this into two components
     Table * table, 
     unsigned long * state,
-		float * state_fluxes, 
+    float * state_fluxes, 
     int N_state_fluxes)
 {
 

@@ -1,0 +1,34 @@
+occaFunction void LCG_RNG( restrict unsigned long * state )
+{
+  unsigned long n1;
+  const unsigned long a = 16807;
+  const unsigned long m = 2147483647;
+  n1 = ( a * (*state) ) % m;
+  *state = n1;
+}
+
+// Initialize global flux states to random numbers on device
+// Slow, poor use of GPU, but fine since it's just initialization code
+occaKernel void init_flux_states( 
+    restrict float * flux_states, 
+    const int N_flux_states, 
+    const Input I, 
+    restrict unsigned long * state)
+{
+  int outerID     = outerId1   * outerDim0  + outerId0;    // geometric segment
+  // int blockId  = blockIdx.y * gridDim.x  + blockIdx.x;  // geometric segment
+  // int threadId = blockId    * blockDim.x + threadIdx.x; // energy group
+
+  if(outerId >= N_flux_states)
+    return;
+
+  // Assign RNG state
+  unsigned long * localState = &state[outerId % I.streams];
+
+  if( innerId0 == 0 )
+    for( int i = 0; i < I.egroups; i++ )
+    {
+      LCG_RNG(localState); // update state to next in sequence
+      flux_states[outerId +i] = (double) *localState / 2147483647;
+    }
+}

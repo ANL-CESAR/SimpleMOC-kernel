@@ -1,26 +1,5 @@
 #include "SimpleMOC-kernel_header.h"
 
-// Initialize global flux states to random numbers on device
-// Slow, poor use of GPU, but fine since it's just initialization code
-__global__ void	init_flux_states( float * flux_states, int N_flux_states, Input I, unsigned long * state)
-{
-	int blockId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment	
-	//int threadId = blockId * blockDim.x + threadIdx.x; // energy group
-
-	if(blockId >= N_flux_states)
-		return;
-
-	// Assign RNG state
-	unsigned long * localState = &state[blockId % I.streams];
-
-	if( threadIdx.x == 0 )
-		for( int i = 0; i < I.egroups; i++ )
-		{
-			LCG_RNG(localState); // update state to next in sequence
-			flux_states[blockId +i] = (double) *localState / 2147483647;
-		}
-}
-
 // Gets I from user and sets defaults
 Input set_default_input( void )
 {
