@@ -2,7 +2,7 @@
 # User Options
 #===============================================================================
 
-COMPILER    = nvcc
+COMPILER    = gcc
 OPTIMIZE    = no
 DEBUG       = no
 PROFILE     = no
@@ -15,27 +15,26 @@ BENCHMARK   = no
 program = SimpleMOC-kernel
 
 source = \
-main.cu \
-kernel.cu \
-init.cu \
-io.cu
+init.c \
+io.c \
+main.c \
 
-obj = $(source:.cu=.o)
+obj = $(source:.c=.o)
 
 #===============================================================================
 # Sets Flags
 #===============================================================================
 
 # Regular gcc Compiler
-ifeq ($(COMPILER),nvcc)
-  CC = nvcc
+ifeq ($(COMPILER),gcc)
+  CC = gcc
 endif
 
 # Standard Flags
-CFLAGS := -arch sm_35 -I/usr/local/cuda-6.0/include -rdc=true 
+CFLAGS := -std=gnu99 -Wall -I${OCCA_DIR}/include
 
 # Linker Flags
-LDFLAGS = -lm
+LDFLAGS = -lm -L${OCCA_DIR} -locca
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -59,7 +58,7 @@ endif
 $(program): $(obj) SimpleMOC-kernel_header.h
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
