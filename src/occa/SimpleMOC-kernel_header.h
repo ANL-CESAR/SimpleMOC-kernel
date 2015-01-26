@@ -49,21 +49,12 @@ typedef struct{
   occaMemory sigT_arr;
 } OCCA_Source_Arrays;
 
-// Table structure for computing exponential
-typedef struct{
-  float values[706];
-  float dx;
-  float maxVal;
-  int N;
-} Table;
-
 // kernel.c
 
 // init.c
 double mem_estimate( Input I );
 Source * initialize_sources( Input I, Source_Arrays * SA );
 occaMemory initialize_occa_sources( Input I, Source_Arrays * SA_h, OCCA_Source_Arrays * SA_d, Source * sources_h, occaDevice device );
-Table buildExponentialTable( void );
 Input set_default_input( void );
 
 // io.c

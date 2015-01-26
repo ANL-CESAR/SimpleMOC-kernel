@@ -15,11 +15,15 @@ BENCHMARK   = no
 program = SimpleMOC-kernel
 
 source = \
-init.c \
-io.c \
 main.c \
+run_kernel.okl \
+init_flux_states.okl \
+init.c \
+io.c 
+
 
 obj = $(source:.c=.o)
+obj += $(source:.okl=.o)
 
 #===============================================================================
 # Sets Flags

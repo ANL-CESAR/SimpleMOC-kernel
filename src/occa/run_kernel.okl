@@ -28,14 +28,6 @@ typedef struct{
   float * sigT_arr;
 } Source_Arrays;
 
-// Table structure for computing exponential
-typedef struct{
-  float values[706];
-  float dx;
-  float maxVal;
-  int N;
-} Table;
-
 occaFunction void LCG_RNG( unsigned long * state )
 {
   unsigned long n1;
@@ -47,24 +39,6 @@ occaFunction void LCG_RNG( unsigned long * state )
 
 /* Interpolates a formed exponential table to compute ( 1- exp(-x) )
  *  at the desired x value */
-occaFunction void interpolateTable(
-    Table * table,
-    float x,
-    float * out)
-{
-  // check to ensure value is in domain
-  if( x > table->maxVal )
-    *out = 1.0f;
-  else
-  {
-    int interval = (int) ( x / table->dx + 0.5f * table->dx );
-    interval = interval * 2;
-    float slope = table->values[ interval ];
-    float intercept = table->values[ interval + 1 ];
-    float val = slope * x + intercept;
-    *out = val;
-  }
-}
 
 /* My parallelization scheme here is to basically have a single
  * block be a geometrical segment, with each thread within the
@@ -81,7 +55,6 @@ occaKernel void run_kernel(
     float *SA_fine_flux_arr,
     float *SA_fine_source_arr,
     float *SA_sigT_arr,
-    Table * table,
     unsigned long * state,
     float * state_fluxes,
     int N_state_fluxes)
@@ -241,7 +214,8 @@ occaKernel void run_kernel(
         tau = sigT * ds;
         sigT2 = sigT * sigT;
 
-        interpolateTable( table, tau, &expVal );
+        //interpolateTable( table, tau, &expVal );
+		expVal = 1.f - exp( -tau );
 
         // Flux Integral
 

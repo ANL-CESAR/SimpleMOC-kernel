@@ -16,15 +16,6 @@ int main( int argc, char * argv[] )
   center_print("INITIALIZATION", 79);
   border_print();
 
-  // Setup CUDA blocks / threads
-  // int n_blocks = sqrt(I.segments);
-  // dim3 blocks(n_blocks, n_blocks);
-  // if( blocks.x * blocks.y < I.segments )
-  // 	blocks.x++;
-  // if( blocks.x * blocks.y < I.segments )
-  // 	blocks.y++;
-  // assert( blocks.x * blocks.y >= I.segments );
-
   // Setup OCCA device and info
   int outer_dim = sqrt(I.segments);
   int inner_dim = I.egroups;
@@ -56,11 +47,6 @@ int main( int argc, char * argv[] )
   occaMemory sources_d = initialize_occa_sources( I, &SA_h, &SA_d, sources_h,
                                                   device);
   occaDeviceFinish(device);
-
-  // Build Exponential Table
-  printf("Building Exponential Table...\n");
-  Table table = buildExponentialTable();
-  occaMemory table_d = occaDeviceMalloc(device, sizeof(Table), &table);
 
   // Setup RNG on Device
   // NOTE - CUDA RNG is not going to work with OCCA - so we're going to revert
@@ -101,15 +87,10 @@ int main( int argc, char * argv[] )
   occaDeviceFinish(device);
   printf("Attentuating fluxes across segments...\n");
 
-  // CUDA timer variables
-  // cudaEvent_t start, stop;
-  // cudaEventCreate(&start);
-  // cudaEventCreate(&stop);
-  // float time = 0;
+  // timer variables
   struct timeval start, end;
 
   // Run Simulation Kernel Loop
-  // cudaEventRecord(start, 0);
   gettimeofday(&start, NULL);
 
   occaKernelRun(run_kernel,
@@ -118,16 +99,10 @@ int main( int argc, char * argv[] )
                 SA_d.fine_flux_arr,
                 SA_d.fine_source_arr,
                 SA_d.sigT_arr,
-                table_d,
                 RNG_states,
                 flux_states,
                 occaInt(N_flux_states));
 
-  // CudaCheckError();
-  // cudaEventRecord(stop, 0);
-  // cudaEventSynchronize(start);
-  // cudaEventSynchronize(stop);
-  // cudaEventElapsedTime(&time, start, stop);
   gettimeofday(&end, NULL);
   double time = (end.tv_sec - start.tv_sec) + (end.tv_usec -
                                                start.tv_usec)/1000000.;
