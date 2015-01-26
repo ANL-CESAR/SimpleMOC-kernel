@@ -50,7 +50,14 @@ occaFunction void LCG_RNG( unsigned long * state )
  */
 
 occaKernel void run_kernel(
-    Input I,
+    int I_source_regions,
+    int I_course_axial_intervals,
+    int I_fine_axial_intervals,
+    long I_segments,
+    int I_egroups,
+    int I_nthreads,
+    int I_streams,
+    // Input I, // We'll ignore it for now, until David can fix his stuff
     Source * S,
     float *SA_fine_flux_arr,
     float *SA_fine_source_arr,
@@ -68,13 +75,16 @@ occaKernel void run_kernel(
       // int outerId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment in CUDA
       int outerId = outerId1  * outerDim0 + outerId0;  // geometric segment in OCCA
 
-      if( outerId >= I.segments )
-        return;
+      if( outerId >= I_segments )
+        continue;
 
       // Randomized variables (common accross all thread within block)
       shared int state_flux_id;
       shared int QSR_id;
       shared int FAI_id;
+
+      // Assign RNG state
+      unsigned long * localState = &state[outerId % I_streams];
 
       for (int innerId0=0; innerId0 < innerDim0; ++innerId0; inner0)
       {
@@ -98,9 +108,6 @@ occaKernel void run_kernel(
         float t3           ;
         float t4           ;
 
-        // Assign RNG state
-        unsigned long * localState = &state[blockId % I.streams];
-
         // Find State Flux Vector in global memory
         // (We are not concerned with coherency here as in actual
         // program threads would be organized in a more specific order)
@@ -117,14 +124,14 @@ occaKernel void run_kernel(
         if( innerId0 == 0 )
         {
           LCG_RNG(localState); // update state to next in sequence
-          QSR_id = *localState % I.source_regions;
+          QSR_id = *localState % I_source_regions;
         }
 
         // Pick Random Fine Axial Interval
         if( innerId0 == 0 )
         {
           LCG_RNG(localState); // update state to next in sequence
-          FAI_id = *localState % I.fine_axial_intervals;
+          FAI_id = *localState % I_fine_axial_intervals;
         }
 
         barrier(localMemFence);
@@ -144,15 +151,15 @@ occaKernel void run_kernel(
         float mu2 = 0.3f;
         float ds = 0.7f;
 
-        const int egroups = I.egroups;
+        const int egroups = I_egroups;
 
         // load fine source region flux vector
-        float * FSR_flux = &SA.fine_flux_arr[ S[QSR_id].fine_flux_id + FAI_id * egroups];
+        float * FSR_flux = &SA_fine_flux_arr[ S[QSR_id].fine_flux_id + FAI_id * egroups];
 
         if( FAI_id == 0 )
         {
-          float * f2 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
-          float * f3 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
+          float * f2 = &SA_fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
+          float * f3 = &SA_fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
           // cycle over energy groups
           // load neighboring sources
           float y2 = f2[g];
@@ -167,10 +174,10 @@ occaKernel void run_kernel(
           q1 = c1;
           q2 = 0;
         }
-        else if ( FAI_id == I.fine_axial_intervals - 1 )
+        else if ( FAI_id == I_fine_axial_intervals - 1 )
         {
-          float * f1 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
-          float * f2 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
+          float * f1 = &SA_fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
+          float * f2 = &SA_fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
           // cycle over energy groups
           // load neighboring sources
           float y1 = f1[g];
@@ -187,9 +194,9 @@ occaKernel void run_kernel(
         }
         else
         {
-          float * f1 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
-          float * f2 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
-          float * f3 = &SA.fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
+          float * f1 = &SA_fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
+          float * f2 = &SA_fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
+          float * f3 = &SA_fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
           // cycle over energy groups
           // load neighboring sources
           float y1 = f1[g];
@@ -208,7 +215,7 @@ occaKernel void run_kernel(
         }
 
         // load total cross section
-        sigT = SA.sigT_arr[ S[QSR_id].sigT_id + g];
+        sigT = SA_sigT_arr[ S[QSR_id].sigT_id + g];
 
         // calculate common values for efficiency
         tau = sigT * ds;

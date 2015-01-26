@@ -89,7 +89,13 @@ int main( int argc, char * argv[] )
   gettimeofday(&start, NULL);
 
   occaKernelRun(run_kernel,
-                occaStruct(&I, sizeof(I)),
+                occaInt(I.source_regions),
+                occaInt(I.course_axial_intervals),
+                occaInt(I.fine_axial_intervals),
+                occaLong(I.segments),
+                occaInt(I.egroups),
+                occaInt(I.nthreads),
+                occaInt(I.streams),
                 sources_d,
                 SA_d.fine_flux_arr,
                 SA_d.fine_source_arr,
