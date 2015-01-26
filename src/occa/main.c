@@ -24,20 +24,22 @@ int main( int argc, char * argv[] )
   occaDevice device = occaGetDevice(device_infos);
 
   occaKernelInfo kinfo = occaGenKernelInfo();
-  occaKernelInfoAddDefine(kinfo, "outer_dim0", occaLong(outer_dim));
-  occaKernelInfoAddDefine(kinfo, "outer_dim1", occaLong(outer_dim));
-  occaKernelInfoAddDefine(kinfo, "inner_dim", occaLong(inner_dim));
+  occaKernelInfoAddDefine(kinfo, "outerDim0", occaLong(outer_dim));
+  occaKernelInfoAddDefine(kinfo, "outerDim1", occaLong(outer_dim));
+  occaKernelInfoAddDefine(kinfo, "innerDim0", occaLong(inner_dim));
 
   // Build OCCA kernels
   occaKernel init_flux_states = occaBuildKernelFromSource(device,
                                                           "init_flux_states.okl",
                                                           "init_flux_states",
                                                           kinfo);
+  printf("Compiled init_flux_states.okl\n");
 
   occaKernel run_kernel = occaBuildKernelFromSource(device,
                                                     "run_kernel.okl",
                                                     "run_kernel",
                                                     kinfo);
+  printf("Compiled run_kernel.okl\n");
 
   // Build Source Data
   printf("Building Source Data Arrays...\n");
