@@ -16,14 +16,10 @@ program = SimpleMOC-kernel
 
 source = \
 main.c \
-run_kernel.okl \
-init_flux_states.okl \
 init.c \
 io.c 
 
-
 obj = $(source:.c=.o)
-obj += $(source:.okl=.o)
 
 #===============================================================================
 # Sets Flags
@@ -38,7 +34,7 @@ endif
 CFLAGS := -std=gnu99 -Wall -I${OCCA_DIR}/include
 
 # Linker Flags
-LDFLAGS = -lm -L${OCCA_DIR} -locca
+LDFLAGS = -lm -L${OCCA_DIR}/lib -locca
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
