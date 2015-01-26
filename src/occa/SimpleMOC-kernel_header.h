@@ -15,6 +15,7 @@
 #include<malloc.h>
 #include<assert.h>
 #include<sys/time.h>
+#include "occa_c.h"
 
 // User inputs
 typedef struct{

@@ -78,10 +78,10 @@ occaMemory initialize_occa_sources( Input I, Source_Arrays * SA_h, OCCA_Source_A
 {
   // Allocate & Copy Fine Source Data
   long N_fine = I.source_regions * I.fine_axial_intervals * I.egroups;
-  SA_d->fine_source_arr = occaDeviceMalloc(device, N_fine * sizeof(float), SA_h->fine_source_arr)
+  SA_d->fine_source_arr = occaDeviceMalloc(device, N_fine * sizeof(float), SA_h->fine_source_arr);
 
-    // Allocate & Copy Fine Flux Data
-    SA_d->fine_flux_arr = occaDeviceMalloc(device, N_fine * sizeof(float), SA_h->fine_flux_arr);
+  // Allocate & Copy Fine Flux Data
+  SA_d->fine_flux_arr = occaDeviceMalloc(device, N_fine * sizeof(float), SA_h->fine_flux_arr);
 
   // Allocate & Copy SigT Data
   long N_sigT = I.source_regions * I.egroups;
@@ -125,6 +125,4 @@ Table buildExponentialTable( void )
   table.N = N;
 
   return table;
-}
-return;
 }
