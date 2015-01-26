@@ -14,6 +14,8 @@
 #include<unistd.h>
 #include<malloc.h>
 #include<assert.h>
+#include<sys/time.h>
+
 
 #define CUDA_ERROR_CHECK
  

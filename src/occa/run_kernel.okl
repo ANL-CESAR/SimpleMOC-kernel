@@ -38,11 +38,11 @@ typedef struct{
 
 occaFunction void LCG_RNG( unsigned long * state )
 {
-	unsigned long n1;
-	unsigned long a = 16807;
-	unsigned long m = 2147483647;
-	n1 = ( a * (*state) ) % m;
-	*state = n1;
+  unsigned long n1;
+  unsigned long a = 16807;
+  unsigned long m = 2147483647;
+  n1 = ( a * (*state) ) % m;
+  *state = n1;
 }
 
 /* Interpolates a formed exponential table to compute ( 1- exp(-x) )
@@ -75,10 +75,10 @@ occaFunction void interpolateTable(
  * 		- A set of __shared__ SIMD vectors, each thread id being its idx
  */
 
-occaKernle void run_kernel( 
+occaKernel void run_kernel( 
     Input I, 
     Source * S,
-    Source_Arrays SA, // May need to split this into two components
+    OCCA_Source_Arrays SA, // May need to split this into two components
     Table * table, 
     unsigned long * state,
     float * state_fluxes, 
@@ -90,7 +90,6 @@ occaKernle void run_kernel(
     for (int outerId0 = 0; outerId0 < outerDim0; ++outerId0; outer0) 
     {
 
-      
       // int outerId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment in CUDA
       int outerId = outerId1  * outerDim0 + outerId0;  // geometric segment in OCCA
 
@@ -125,8 +124,7 @@ occaKernle void run_kernel(
         float t4           ;
 
         // Assign RNG state
-        // Need to find non-CUDA alternative
-        curandState * localState = &state[blockId % I.streams];  
+        unsigned long * localState = &state[blockId % I.streams];
 
         // Find State Flux Vector in global memory
         // (We are not concerned with coherency here as in actual
@@ -138,7 +136,6 @@ occaKernle void run_kernel(
         }
 
         barrier(localMemFence);
-
         float * state_flux = &state_fluxes[state_flux_id];
 
         // Pick Random QSR

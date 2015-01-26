@@ -37,6 +37,8 @@ int main( int argc, char * argv[] )
   // Build OCCA kernels
   init_flux_states = occaBuildKernelFromSource(device, "init_flux_states.okl",
       "init_flux_states", kinfo);
+  run_kernel = occaBuildKernelFromSource(device, "run_kernel.okl",
+      "run_kernel", kinfo);
 
   // Build Source Data
   printf("Building Source Data Arrays...\n");
@@ -84,25 +86,32 @@ int main( int argc, char * argv[] )
   printf("Attentuating fluxes across segments...\n");
 
   // CUDA timer variables
-  cudaEvent_t start, stop;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  float time = 0;
+  // cudaEvent_t start, stop;
+  // cudaEventCreate(&start);
+  // cudaEventCreate(&stop);
+  // float time = 0;
+  struct timeval start, end;
 
   // Run Simulation Kernel Loop
-  cudaEventRecord(start, 0);
-  run_kernel <<< blocks, I.egroups >>> (I, sources_d, SA_d, table_d, 
-      RNG_states, flux_states, N_flux_states);
-  CudaCheckError();
-  cudaEventRecord(stop, 0);
-  cudaEventSynchronize(start);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&time, start, stop);
-  cudaDeviceSynchronize();
+  // cudaEventRecord(start, 0);
+  gettimeofday(&start, NULL);
+  occaKernelRun(run_kernel, I, sources_d, SA_d, table_d, RNG_states,
+      flux_states, N_flux_states);
+  // CudaCheckError();
+  // cudaEventRecord(stop, 0);
+  // cudaEventSynchronize(start);
+  // cudaEventSynchronize(stop);
+  // cudaEventElapsedTime(&time, start, stop);
+  gettimeofday(&end, NULL);
+  double time = (end.tv_sec - start.tv_sec) + (end.tv_usec -
+      start.tv_usec)/1000000.;
+  device.finish();
 
   // Copy final data back to host, for kicks.
-  float * host_flux_states = (float*) malloc(N_flux_states * I.egroups * sizeof(float));
-  CUDA_CALL( cudaMemcpy( host_flux_states, flux_states, N_flux_states * I.egroups * sizeof(float), cudaMemcpyDeviceToHost));
+  float * host_flux_states = (float*) malloc(N_flux_states * I.egroups *
+      sizeof(float));
+  occaCopyMemToPtr(host_flux_states, flux_states, N_flux_states * I.egroups *
+      sizeof(float), 0);
 
   printf("Simulation Complete.\n");
 
@@ -110,9 +119,8 @@ int main( int argc, char * argv[] )
   center_print("RESULTS SUMMARY", 79);
   border_print();
 
-  double tpi = ((double) (time/1000.0) /
-      (double)I.segments / (double) I.egroups) * 1.0e9;
-  printf("%-25s%.3f seconds\n", "Runtime:", time / 1000.0);
+  double tpi = (time / (double)I.segments / (double) I.egroups) * 1.0e9;
+  printf("%-25s%.3f seconds\n", "Runtime:", time );
   printf("%-25s%.3lf ns\n", "Time per Intersection:", tpi);
   border_print();
 
