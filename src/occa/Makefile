@@ -65,7 +65,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 edit:
-	vim -p $(source) SimpleMOC-kernel_header.h
+	vim -p $(source) *.okl SimpleMOC-kernel_header.h
 
 run:
 	./$(program)

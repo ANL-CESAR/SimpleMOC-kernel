@@ -28,13 +28,7 @@ int main( int argc, char * argv[] )
   occaKernelInfoAddDefine(kinfo, "outerDim1", occaLong(outer_dim));
   occaKernelInfoAddDefine(kinfo, "innerDim0", occaLong(inner_dim));
 
-  // Build OCCA kernels
-  occaKernel init_flux_states = occaBuildKernelFromSource(device,
-                                                          "init_flux_states.okl",
-                                                          "init_flux_states",
-                                                          kinfo);
-  printf("Compiled init_flux_states.okl\n");
-
+  // Build OCCA kernel
   occaKernel run_kernel = occaBuildKernelFromSource(device,
                                                     "run_kernel.okl",
                                                     "run_kernel",
@@ -71,16 +65,15 @@ int main( int argc, char * argv[] )
 
   int N_flux_states = 10000;
   assert( I.segments >= N_flux_states );
-
+  float * flux_state_h = (float *) malloc( N_flux_states * I.egroups * sizeof(float));
+  for( int i = 0; i < N_flux_states * I.egroups; i++ )
+  {
+	  flux_state_h[i] = (float) rand() / RAND_MAX;
+  }
   occaMemory flux_states = occaDeviceMalloc(device,
                                             N_flux_states * I.egroups * sizeof(float),
-                                            NULL);
-
-  occaKernelRun(init_flux_states,
-                flux_states,
-                occaInt(N_flux_states),
-                occaStruct(&I, sizeof(I)),
-                RNG_states);
+                                            flux_state_h);
+  free(flux_state_h);
 
   printf("Initialization Complete.\n");
   border_print();
