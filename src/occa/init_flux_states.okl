@@ -1,3 +1,13 @@
+typedef struct{
+  int source_regions;
+  int course_axial_intervals;
+  int fine_axial_intervals;
+  long segments;
+  int egroups;
+  int nthreads;
+  int streams;
+} Input;
+
 occaFunction void LCG_RNG( restrict unsigned long * state )
 {
   unsigned long n1;
@@ -9,11 +19,11 @@ occaFunction void LCG_RNG( restrict unsigned long * state )
 
 // Initialize global flux states to random numbers on device
 // Slow, poor use of GPU, but fine since it's just initialization code
-occaKernel void init_flux_states( 
-    restrict float * flux_states, 
-    const int N_flux_states, 
-    const Input I, 
-    restrict unsigned long * state)
+occaKernel void init_flux_states(
+                                 restrict float * flux_states,
+                                 const int N_flux_states,
+                                 const Input I,
+                                 restrict unsigned long * state)
 {
   int outerID     = outerId1   * outerDim0  + outerId0;    // geometric segment
   // int blockId  = blockIdx.y * gridDim.x  + blockIdx.x;  // geometric segment
@@ -27,8 +37,8 @@ occaKernel void init_flux_states(
 
   if( innerId0 == 0 )
     for( int i = 0; i < I.egroups; i++ )
-    {
-      LCG_RNG(localState); // update state to next in sequence
-      flux_states[outerId +i] = (double) *localState / 2147483647;
-    }
+      {
+        LCG_RNG(localState); // update state to next in sequence
+        flux_states[outerId +i] = (double) *localState / 2147483647;
+      }
 }

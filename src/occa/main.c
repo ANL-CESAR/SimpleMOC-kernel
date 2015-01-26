@@ -28,25 +28,33 @@ int main( int argc, char * argv[] )
   // Setup OCCA device and info
   int outer_dim = sqrt(I.segments);
   int inner_dim = I.egroups;
-  occaDevice device;
+
+  const char *device_infos = "mode = OpenMP";
+  occaDevice device = occaGetDevice(device_infos);
+
   occaKernelInfo kinfo = occaGenKernelInfo();
   occaKernelInfoAddDefine(kinfo, "outer_dim0", occaLong(outer_dim));
   occaKernelInfoAddDefine(kinfo, "outer_dim1", occaLong(outer_dim));
   occaKernelInfoAddDefine(kinfo, "inner_dim", occaLong(inner_dim));
 
   // Build OCCA kernels
-  occaKernel init_flux_states = occaBuildKernelFromSource(device, "init_flux_states.okl",
-      "init_flux_states", kinfo);
-  occaKernel run_kernel = occaBuildKernelFromSource(device, "run_kernel.okl",
-      "run_kernel", kinfo);
+  occaKernel init_flux_states = occaBuildKernelFromSource(device,
+                                                          "init_flux_states.okl",
+                                                          "init_flux_states",
+                                                          kinfo);
+
+  occaKernel run_kernel = occaBuildKernelFromSource(device,
+                                                    "run_kernel.okl",
+                                                    "run_kernel",
+                                                    kinfo);
 
   // Build Source Data
   printf("Building Source Data Arrays...\n");
-  Source_Arrays SA_h; 
-  OCCA_Source_Arrays SA_d; 
-  Source * sources_h = initialize_sources(I, &SA_h); 
+  Source_Arrays SA_h;
+  OCCA_Source_Arrays SA_d;
+  Source * sources_h = initialize_sources(I, &SA_h);
   occaMemory sources_d = initialize_occa_sources( I, &SA_h, &SA_d, sources_h,
-      device); 
+                                                  device);
   occaDeviceFinish(device);
 
   // Build Exponential Table
@@ -60,23 +68,31 @@ int main( int argc, char * argv[] )
   // the limited state streams concept (i.e., # RNG states << # GPU threads)
   printf("Setting up RNG...\n");
   unsigned long * RNG_states_h = (unsigned long *) malloc( I.streams *
-      sizeof(unsigned long));
+                                                           sizeof(unsigned long));
   // Init states to something
   unsigned long time_of_exec = time(NULL);
   for( int i = 0; i < I.streams; i++ )
     RNG_states_h[i] = time_of_exec + i + 1;
   occaMemory RNG_states = occaDeviceMalloc(device, I.streams * sizeof(unsigned
-        long), RNG_states_h);
+                                                                      long), RNG_states_h);
   free(RNG_states_h); // as we don't need host states anymore
   occaDeviceFinish(device);
 
   // Allocate Some Flux State vectors to randomly pick from
   printf("Setting up Flux State Vectors...\n");
+
   int N_flux_states = 10000;
   assert( I.segments >= N_flux_states );
-  occaMemory flux_states = occaDeviceMalloc(device, N_flux_states * I.egroups *
-      sizeof(float), NULL);
-  occaKernelRun(init_flux_states, flux_states, occaInt(N_flux_states), I, RNG_states);
+
+  occaMemory flux_states = occaDeviceMalloc(device,
+                                            N_flux_states * I.egroups * sizeof(float),
+                                            NULL);
+
+  occaKernelRun(init_flux_states,
+                flux_states,
+                occaInt(N_flux_states),
+                occaStruct(&I, sizeof(I)),
+                RNG_states);
 
   printf("Initialization Complete.\n");
   border_print();
@@ -95,8 +111,18 @@ int main( int argc, char * argv[] )
   // Run Simulation Kernel Loop
   // cudaEventRecord(start, 0);
   gettimeofday(&start, NULL);
-  occaKernelRun(run_kernel, I, sources_d, SA_d, table_d, RNG_states,
-      flux_states, occaInt(N_flux_states));
+
+  occaKernelRun(run_kernel,
+                occaStruct(&I, sizeof(I)),
+                sources_d,
+                SA_d.fine_flux_arr,
+                SA_d.fine_source_arr,
+                SA_d.sigT_arr,
+                table_d,
+                RNG_states,
+                flux_states,
+                occaInt(N_flux_states));
+
   // CudaCheckError();
   // cudaEventRecord(stop, 0);
   // cudaEventSynchronize(start);
@@ -104,14 +130,14 @@ int main( int argc, char * argv[] )
   // cudaEventElapsedTime(&time, start, stop);
   gettimeofday(&end, NULL);
   double time = (end.tv_sec - start.tv_sec) + (end.tv_usec -
-      start.tv_usec)/1000000.;
+                                               start.tv_usec)/1000000.;
   occaDeviceFinish(device);
 
   // Copy final data back to host, for kicks.
   float * host_flux_states = (float*) malloc(N_flux_states * I.egroups *
-      sizeof(float));
+                                             sizeof(float));
   occaCopyMemToPtr(host_flux_states, flux_states, N_flux_states * I.egroups *
-      sizeof(float), 0);
+                   sizeof(float), 0);
 
   printf("Simulation Complete.\n");
 
