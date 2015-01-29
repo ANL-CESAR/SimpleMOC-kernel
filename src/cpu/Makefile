@@ -7,7 +7,7 @@ OPENMP      = yes
 OPTIMIZE    = yes
 DEBUG       = no
 PROFILE     = no
-PAPI        = yes
+PAPI        = no
 MIC         = no
 
 #===============================================================================

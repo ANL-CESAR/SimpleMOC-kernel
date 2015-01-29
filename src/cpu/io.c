@@ -77,7 +77,6 @@ void print_input_summary(Input * I)
 	#endif
 	printf("%-25s%d\n", "Energy Groups:", I->egroups);
 	printf("%-25s%d\n", "Source Regions:", I->source_regions);
-	printf("%-25s%d\n", "Course Axial Intervals:", I->course_axial_intervals);
 	printf("%-25s%d\n", "Fine Axial Intervals:", I->fine_axial_intervals);
 	printf("%-25s", "Segments:"); fancy_int(I->segments);
 	#ifdef PAPI

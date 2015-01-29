@@ -24,7 +24,6 @@
 // User inputs
 typedef struct{
 	int source_regions;
-	int course_axial_intervals;
 	int fine_axial_intervals;
 	long segments;
 	int egroups;

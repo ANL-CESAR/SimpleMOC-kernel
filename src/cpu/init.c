@@ -53,7 +53,7 @@ Source * initialize_sources( Input * I )
 	#ifdef OPENMP
 	omp_lock_t * locks = init_locks(I);
 	for( int i = 0; i < I->source_regions; i++)
-		sources[i].locks = &locks[i * I->course_axial_intervals];
+		sources[i].locks = &locks[i * I->fine_axial_intervals];
 	#endif
 
 	// Initialize fine source and flux to random numbers
@@ -172,7 +172,7 @@ SIMD_Vectors allocate_simd_vectors(Input * I)
 omp_lock_t * init_locks( Input * I )
 {
 	// Allocate locks array
-	long n_locks = I->source_regions * I->course_axial_intervals; 
+	long n_locks = I->source_regions * I->fine_axial_intervals; 
 	omp_lock_t * locks = (omp_lock_t *) malloc( n_locks* sizeof(omp_lock_t));
 
 	// Initialize locks array
