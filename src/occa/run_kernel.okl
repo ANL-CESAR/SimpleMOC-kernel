@@ -28,6 +28,14 @@ typedef struct{
   float * sigT_arr;
 } Source_Arrays;
 
+// Table structure for computing exponential
+typedef struct{
+	float values[706];
+	float dx;
+	float maxVal;
+	int N;
+} Table;
+
 occaFunction void LCG_RNG( unsigned long * state )
 {
   unsigned long n1;
@@ -39,6 +47,22 @@ occaFunction void LCG_RNG( unsigned long * state )
 
 /* Interpolates a formed exponential table to compute ( 1- exp(-x) )
  *  at the desired x value */
+occaFunction void interpolateTable(const Table * table, float x, float * out)
+{
+	// check to ensure value is in domain
+	if( x > table->maxVal )
+		*out = 1.0f;
+	else
+	{
+		int interval = (int) ( x / table->dx + 0.5f * table->dx );
+		interval = interval * 2;
+		float slope = table->values[ interval ];
+		float intercept = table->values[ interval + 1 ];
+		float val = slope * x + intercept;
+		*out = val;
+	}
+}
+
 
 /* My parallelization scheme here is to basically have a single
  * block be a geometrical segment, with each thread within the
@@ -50,21 +74,21 @@ occaFunction void LCG_RNG( unsigned long * state )
  */
 
 occaKernel void run_kernel(
-    int I_source_regions,
-    int I_course_axial_intervals,
-    int I_fine_axial_intervals,
-    long I_segments,
-    int I_egroups,
-    int I_nthreads,
-    int I_streams,
-    // Input I, // We'll ignore it for now, until David can fix his stuff
-    Source * S,
-    float *SA_fine_flux_arr,
-    float *SA_fine_source_arr,
-    float *SA_sigT_arr,
-    unsigned long * state,
-    float * state_fluxes,
-    int N_state_fluxes)
+    const int                I_source_regions,
+    const int                I_course_axial_intervals,
+    const int                I_fine_axial_intervals,
+    const long               I_segments,
+    const int                I_egroups,
+    const int                I_nthreads,
+    const int                I_streams,
+    const Source  * restrict S,
+    float         * restrict SA_fine_flux_arr,
+    float         * restrict SA_fine_source_arr,
+    float         * restrict SA_sigT_arr,
+    const Table   * restrict table,
+    unsigned long * restrict state,
+    float         * restrict state_fluxes,
+    const int                N_state_fluxes)
 {
 
   for (int outerId1 = 0; outerId1 < outerDim1; ++outerId1; outer1)
@@ -73,68 +97,60 @@ occaKernel void run_kernel(
     {
 
       // int outerId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment in CUDA
-      int outerId = outerId1  * outerDim0 + outerId0;  // geometric segment in OCCA
+      const int outerId = outerId1  * outerDim0 + outerId0;  // geometric segment in OCCA
+
+      // Randomized variables (common accross all thread within block)
+      shared unsigned long int randIdx[3];
+
+      for(int innerId0=0; innerId0 < innerDim0; ++innerId0; inner0){
+        if(innerId0 == 0){
+          // Assign RNG state
+          unsigned long * localState = &state[outerId % I_streams];
+
+          // update state to next in sequence
+          LCG_RNG(localState); randIdx[0] = *localState;
+          LCG_RNG(localState); randIdx[1] = *localState;
+          LCG_RNG(localState); randIdx[2] = *localState;
+        }
+      }
+
+      barrier(localMemFence);
 
       if( outerId >= I_segments )
         continue;
 
-      // Randomized variables (common accross all thread within block)
-      shared int state_flux_id;
-      shared int QSR_id;
-      shared int FAI_id;
-
-      // Assign RNG state
-      unsigned long * localState = &state[outerId % I_streams];
-
       for (int innerId0=0; innerId0 < innerDim0; ++innerId0; inner0)
       {
-
-        int g = innerId0; // Each energy group (g) is one thread in a block
+        const int g = innerId0; // Each energy group (g) is one thread in a block
 
         // Thread Local (i.e., specific to E group) variables
         // Similar to SIMD vectors in CPU code
         float q0           ;
         float q1           ;
         float q2           ;
-        float sigT         ;
         float tau          ;
         float sigT2        ;
         float expVal       ;
         float reuse        ;
         float flux_integral;
         float tally        ;
-        float t1           ;
-        float t2           ;
-        float t3           ;
-        float t4           ;
 
         // Find State Flux Vector in global memory
         // (We are not concerned with coherency here as in actual
         // program threads would be organized in a more specific order)
-        if( innerId0 == 0 )
-        {
-          LCG_RNG(localState); // update state to next in sequence
-          state_flux_id = *localState % N_state_fluxes;
-        }
 
-        barrier(localMemFence);
-        float * state_flux = &state_fluxes[state_flux_id];
+        const unsigned long int randIdx_r0 = randIdx[0];
+        const unsigned long int randIdx_r1 = randIdx[1];
+        const unsigned long int randIdx_r2 = randIdx[2];
+
+        float *state_flux_ptr  = state_fluxes + (randIdx_r0 % N_state_fluxes);
+        const float state_flux = state_flux_ptr[g];
 
         // Pick Random QSR
-        if( innerId0 == 0 )
-        {
-          LCG_RNG(localState); // update state to next in sequence
-          QSR_id = *localState % I_source_regions;
-        }
+        const int QSR_id = randIdx_r1 % I_source_regions;
 
         // Pick Random Fine Axial Interval
-        if( innerId0 == 0 )
-        {
-          LCG_RNG(localState); // update state to next in sequence
-          FAI_id = *localState % I_fine_axial_intervals;
-        }
-
-        barrier(localMemFence);
+        const int FAI_id = randIdx_r2 % I_fine_axial_intervals;
 
         //////////////////////////////////////////////////////////
         // Attenuate Segment
@@ -144,26 +160,30 @@ occaKernel void run_kernel(
         // calculated based off position in geometry. This treatment
         // shaves off a few FLOPS, but is not significant compared to the
         // rest of the function.
-        float dz = 0.1f;
-        float zin = 0.3f;
-        float weight = 0.5f;
-        float mu = 0.9f;
-        float mu2 = 0.3f;
-        float ds = 0.7f;
+        const float dz     = 0.1f;
+        const float zin    = 0.3f;
+        const float weight = 0.5f;
+        const float mu     = 0.9f;
+        const float mu2    = 0.3f;
+        const float ds     = 0.7f;
 
         const int egroups = I_egroups;
 
         // load fine source region flux vector
-        float * FSR_flux = &SA_fine_flux_arr[ S[QSR_id].fine_flux_id + FAI_id * egroups];
+
+        const Source S_g             = S[QSR_id];
+        const long S_fine_flux_off   = S_g.fine_flux_id   + (FAI_id * egroups);
+        const long S_fine_source_off = S_g.fine_source_id + (FAI_id * egroups);
+
+        // load total cross section
+        const float sigT = SA_sigT_arr[ S_g.sigT_id + g];
+
+        float * FSR_flux = &SA_fine_flux_arr[S_fine_flux_off + g];
 
         if( FAI_id == 0 )
         {
-          float * f2 = &SA_fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
-          float * f3 = &SA_fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
-          // cycle over energy groups
-          // load neighboring sources
-          float y2 = f2[g];
-          float y3 = f3[g];
+          float y2 = SA_fine_source_arr[S_fine_source_off + (0 * egroups) + g];
+          float y3 = SA_fine_source_arr[S_fine_source_off + (1 * egroups) + g];
 
           // do linear "fitting"
           float c0 = y2;
@@ -176,12 +196,10 @@ occaKernel void run_kernel(
         }
         else if ( FAI_id == I_fine_axial_intervals - 1 )
         {
-          float * f1 = &SA_fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
-          float * f2 = &SA_fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
           // cycle over energy groups
           // load neighboring sources
-          float y1 = f1[g];
-          float y2 = f2[g];
+          float y1 = SA_fine_source_arr[S_fine_source_off - (1 * egroups) + g];
+          float y2 = SA_fine_source_arr[S_fine_source_off + (0 * egroups) + g];
 
           // do linear "fitting"
           float c0 = y2;
@@ -194,14 +212,11 @@ occaKernel void run_kernel(
         }
         else
         {
-          float * f1 = &SA_fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id-1)*egroups];
-          float * f2 = &SA_fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id)*egroups];
-          float * f3 = &SA_fine_source_arr[ S[QSR_id].fine_source_id + (FAI_id+1)*egroups];
           // cycle over energy groups
           // load neighboring sources
-          float y1 = f1[g];
-          float y2 = f2[g];
-          float y3 = f3[g];
+          float y1 = SA_fine_source_arr[S_fine_source_off - (1 * egroups) + g];
+          float y2 = SA_fine_source_arr[S_fine_source_off + (0 * egroups) + g];
+          float y3 = SA_fine_source_arr[S_fine_source_off + (1 * egroups) + g];
 
           // do quadratic "fitting"
           float c0 = y2;
@@ -214,15 +229,12 @@ occaKernel void run_kernel(
           q2 = c2;
         }
 
-        // load total cross section
-        sigT = SA_sigT_arr[ S[QSR_id].sigT_id + g];
-
         // calculate common values for efficiency
-        tau = sigT * ds;
+        tau   = sigT * ds;
         sigT2 = sigT * sigT;
 
-        //interpolateTable( table, tau, &expVal );
-		expVal = 1.f - exp( -tau );
+        // interpolateTable( table, tau, &expVal );
+        expVal = 1.f - exp( -tau );
 
         // Flux Integral
 
@@ -231,8 +243,8 @@ occaKernel void run_kernel(
           / (sigT * sigT2);
 
         // add contribution to new source flux
-        flux_integral = (q0 * tau + (sigT * state_flux[g] - q0)
-            * expVal) / sigT2 + q1 * mu * reuse + q2 * mu2
+        flux_integral = (q0 * tau + (sigT * state_flux - q0)
+          * expVal) / sigT2 + q1 * mu * reuse + q2 * mu2
           * (tau * (tau * (tau - 3.f) + 6.f) - 6.f * expVal)
           / (3.f * sigT2 * sigT2);
 
@@ -240,19 +252,17 @@ occaKernel void run_kernel(
         tally = weight * flux_integral;
 
         // SHOULD BE ATOMIC HERE!
-        //FSR_flux[g] += tally;
-        occaAtomicAdd(&FSR_flux[g], (float) tally);
+        *FSR_flux += tally;
+        // atomicAdd(FSR_flux, tally);
 
-        // Term 1
-        t1 = q0 * expVal / sigT;
-        // Term 2
-        t2 = q1 * mu * (tau - expVal) / sigT2;
-        // Term 3
-        t3 =	q2 * mu2 * reuse;
-        // Term 4
-        t4 = state_flux[g] * (1.f - expVal);
+        // Terms 1, 2, 3, and 4
+        const float t1 = q0 * expVal / sigT;
+        const float t2 = q1 * mu * (tau - expVal) / sigT2;
+        const float t3 = q2 * mu2 * reuse;
+        const float t4 = state_flux * (1.f - expVal);
+
         // Total psi
-        state_flux[g] = t1 + t2 + t3 + t4;
+        state_flux_ptr[g] = t1 + t2 + t3 + t4;
       } // end inner0
     } // end outer0
   } // end outer1

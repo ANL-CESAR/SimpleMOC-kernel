@@ -20,7 +20,8 @@ int main( int argc, char * argv[] )
   int outer_dim = sqrt(I.segments);
   int inner_dim = I.egroups;
 
-  const char *device_infos = "mode = OpenMP";
+  const char *device_infos = "mode = CUDA, deviceID = 0";
+  /* const char *device_infos = "mode = OpenMP"; */
   occaDevice device = occaGetDevice(device_infos);
 
   occaKernelInfo kinfo = occaGenKernelInfo();
@@ -43,6 +44,11 @@ int main( int argc, char * argv[] )
   occaMemory sources_d = initialize_occa_sources( I, &SA_h, &SA_d, sources_h,
                                                   device);
   occaDeviceFinish(device);
+
+	// Build Exponential Table
+	printf("Building Exponential Table...\n");
+	Table table = buildExponentialTable();
+	occaMemory table_d = occaDeviceMalloc(device, sizeof(Table), &table);
 
   // Setup RNG on Device
   // NOTE - CUDA RNG is not going to work with OCCA - so we're going to revert
@@ -100,14 +106,16 @@ int main( int argc, char * argv[] )
                 SA_d.fine_flux_arr,
                 SA_d.fine_source_arr,
                 SA_d.sigT_arr,
+                table_d,
                 RNG_states,
                 flux_states,
                 occaInt(N_flux_states));
 
+  occaDeviceFinish(device);
+
   gettimeofday(&end, NULL);
   double time = (end.tv_sec - start.tv_sec) + (end.tv_usec -
                                                start.tv_usec)/1000000.;
-  occaDeviceFinish(device);
 
   // Copy final data back to host, for kicks.
   float * host_flux_states = (float*) malloc(N_flux_states * I.egroups *
