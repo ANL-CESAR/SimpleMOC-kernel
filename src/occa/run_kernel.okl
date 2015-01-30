@@ -74,13 +74,7 @@ occaFunction void interpolateTable(const Table * table, float x, float * out)
  */
 
 occaKernel void run_kernel(
-    const int                I_source_regions,
-    const int                I_course_axial_intervals,
-    const int                I_fine_axial_intervals,
-    const long               I_segments,
-    const int                I_egroups,
-    const int                I_nthreads,
-    const int                I_streams,
+    const Input              I,
     const Source  * restrict S,
     float         * restrict SA_fine_flux_arr,
     float         * restrict SA_fine_source_arr,
@@ -105,7 +99,7 @@ occaKernel void run_kernel(
       for(int innerId0=0; innerId0 < innerDim0; ++innerId0; inner0){
         if(innerId0 == 0){
           // Assign RNG state
-          unsigned long * localState = &state[outerId % I_streams];
+          unsigned long * localState = &state[outerId % I.streams];
 
           // update state to next in sequence
           LCG_RNG(localState); randIdx[0] = *localState;
@@ -116,7 +110,7 @@ occaKernel void run_kernel(
 
       barrier(localMemFence);
 
-      if( outerId >= I_segments )
+      if( outerId >= I.segments )
         continue;
 
       for (int innerId0=0; innerId0 < innerDim0; ++innerId0; inner0)
@@ -147,10 +141,10 @@ occaKernel void run_kernel(
         const float state_flux = state_flux_ptr[g];
 
         // Pick Random QSR
-        const int QSR_id = randIdx_r1 % I_source_regions;
+        const int QSR_id = randIdx_r1 % I.source_regions;
 
         // Pick Random Fine Axial Interval
-        const int FAI_id = randIdx_r2 % I_fine_axial_intervals;
+        const int FAI_id = randIdx_r2 % I.fine_axial_intervals;
 
         //////////////////////////////////////////////////////////
         // Attenuate Segment
@@ -167,7 +161,7 @@ occaKernel void run_kernel(
         const float mu2    = 0.3f;
         const float ds     = 0.7f;
 
-        const int egroups = I_egroups;
+        const int egroups = I.egroups;
 
         // load fine source region flux vector
 
@@ -194,7 +188,7 @@ occaKernel void run_kernel(
           q1 = c1;
           q2 = 0;
         }
-        else if ( FAI_id == I_fine_axial_intervals - 1 )
+        else if ( FAI_id == I.fine_axial_intervals - 1 )
         {
           // cycle over energy groups
           // load neighboring sources
