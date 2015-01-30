@@ -5,7 +5,7 @@
 COMPILER    = intel
 OPENMP      = yes
 OPTIMIZE    = yes
-DEBUG       = no
+DEBUG       = yes
 PROFILE     = no
 PAPI        = no
 MIC         = no
