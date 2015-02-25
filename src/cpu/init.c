@@ -4,7 +4,6 @@
 Input * set_default_input( void )
 {
 	Input * I = (Input *) malloc(sizeof(Input));
-
 	I->source_regions = 2250;
 	I->course_axial_intervals = 9;
 	I->fine_axial_intervals = 5;

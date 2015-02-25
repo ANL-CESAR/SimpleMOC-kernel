@@ -21,6 +21,12 @@
 #include<papi.h>
 #endif
 
+#ifdef OFFLOAD
+#define ALLOC alloc_if(1) free_if(0)
+#define REUSE alloc_if(0) free_if(0)
+#define FREE  alloc_if(0) free_if(1)
+#endif
+
 // User inputs
 typedef struct{
 	int source_regions;
@@ -76,22 +82,38 @@ typedef struct{
 } SIMD_Vectors;
 
 // kernel.c
+#ifdef OFFLOAD // Build for Xeon Phi Offload as well
+#pragma offload_attribute(push, target(mic))
+void send_structs(Input * I, Source * S, Table * table);
+void get_structs(Input * I, Source * S, Table * table);
+#endif
+void calc(Input *I, Source *S, Table * table);
 void run_kernel( Input * I, Source * S, Table * table);
 void attenuate_segment( Input * restrict I, Source * restrict S,
 		int QSR_id, int FAI_id, float * restrict state_flux,
 		SIMD_Vectors * restrict simd_vecs, Table * restrict table); 
 float interpolateTable( Table * table, float x);
+#ifdef OFFLOAD // Build for Xeon Phi Offload as well
+#pragma offload_attribute(pop)
+#endif
 
 // init.c
+#ifdef OFFLOAD // Build for Xeon Phi Offload as well
+#pragma offload_attribute(push, target(mic))
+#endif
 Source * aligned_initialize_sources( Input * I );
 Source * initialize_sources( Input * I );
 Table * buildExponentialTable( float precision, float maxVal );
 Input * set_default_input( void );
 SIMD_Vectors aligned_allocate_simd_vectors(Input * I);
 SIMD_Vectors allocate_simd_vectors(Input * I);
+
 double get_time(void);
 #ifdef OPENMP
 omp_lock_t * init_locks( Input * I );
+#endif
+#ifdef OFFLOAD // Build for Xeon Phi Offload as well
+#pragma offload_attribute(pop)
 #endif
 
 // io.c

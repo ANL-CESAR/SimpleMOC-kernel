@@ -7,14 +7,19 @@ OPENMP      = yes
 OPTIMIZE    = yes
 DEBUG       = no
 PROFILE     = no
-PAPI        = yes
-MIC         = no
+PAPI        = no
+MIC         = yes
+OFFLOAD     = yes
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = SimpleMOC-kernel
+ifeq ($(MIC),yes)
+ program = SimpleMOC-kernel-mic
+else
+ program = SimpleMOC-kernel
+endif
 
 source = \
 main.c \
@@ -67,7 +72,12 @@ endif
 
 # MIC Flags
 ifeq ($(MIC),yes)
+ifeq ($(OFFLOAD),no)
   CFLAGS += -mmic
+endif
+ifeq ($(OFFLOAD),yes)
+  CFLAGS += -DOFFLOAD -ww2568
+endif
 endif
 
 # Optimization Flags

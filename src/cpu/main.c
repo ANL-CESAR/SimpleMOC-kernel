@@ -35,7 +35,28 @@ int main( int argc, char * argv[] )
 
 	// Run Simulation Kernel Loop
 	start = get_time();
+    #ifdef OFFLOAD
+    //int n_d = _Offload_number_of_devices(); 
+    int n_d = 1; 
+    int i;
+    if(n_d < 1){
+        printf("No devices available for offload\n");
+        return(2);
+    }
+
+    send_structs(I, S, table); 
+    for(i=0; i<n_d; i++){
+        #pragma offload target(mic:i) \
+        in(I[0:0], S[0:0], table[0:0])
+        {
+	        run_kernel(I, S, table);
+        }
+    }
+    get_structs(I, S, table);
+
+    #else
 	run_kernel(I, S, table);
+    #endif
 	stop = get_time();
 
 	printf("Simulation Complete.\n");

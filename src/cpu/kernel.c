@@ -1,7 +1,98 @@
 #include "SimpleMOC-kernel_header.h"
 
+#ifdef OFFLOAD
+void send_structs(Input * I, Source * S, Table * table)
+{
+    int n_d = _Offload_number_of_devices();
+    int i,j;
+
+    // Unpack Input
+	int source_regions = I->source_regions;
+	int course_axial_intervals = I->course_axial_intervals;
+	int fine_axial_intervals = I->fine_axial_intervals;
+	long segments = I->segments;
+	int egroups = I->egroups;
+	int nthreads = I->nthreads;
+
+    // Unpack Source
+	float * fine_flux = S->fine_flux;
+	float * fine_source = S->fine_source;
+	float * sigT = S->sigT;
+	#ifdef OPENMP
+	omp_lock_t * locks = S->locks;
+	#endif
+
+    // Unpack Table
+	float * values = table->values;
+	float dx = table->dx;
+	float maxVal = table->maxVal;
+	int N = table->N * 2;
+
+    long fine_flux_N = I->source_regions * I->fine_axial_intervals * I->egroups;
+    long fine_source_N  = fine_flux_N;
+    long locks_N = I->source_regions * I->course_axial_intervals;
+    long sigT_N = I->source_regions * I->egroups;
+
+    for(i=0; i<n_d; i++){
+        #pragma offload target(mic:i) \
+        nocopy(I : length(1) ALLOC) \
+        nocopy(S: length(I->source_regions)  ALLOC) \
+        nocopy(table : length(1) ALLOC) \
+        in(source_regions, \
+           course_axial_intervals, \
+           fine_axial_intervals, \
+           segments, \
+           egroups, \
+           nthreads) \
+        in( fine_flux[0:fine_flux_N] :  ALLOC ) \
+        in( locks[0:locks_N] :  ALLOC ) \
+        in( fine_source[0:fine_source_N] : ALLOC ) \
+        in( sigT[0:sigT_N] : ALLOC ) \
+        in( values[0:(2*N)] : ALLOC ) \
+        in( dx, maxVal, N )
+        {
+
+            // Repack Input    
+            I->source_regions = source_regions;
+            I->course_axial_intervals = course_axial_intervals;
+            I->fine_axial_intervals = fine_axial_intervals;
+            I->segments = segments;
+            I->egroups = egroups;
+            I->nthreads = nthreads;
+
+            // Repack Source
+            for(j=0; j < I->source_regions; j++){
+                S[j].fine_flux = &fine_flux[j * I->fine_axial_intervals * I->egroups];  
+                S[j].fine_source = &fine_source[j * I->fine_axial_intervals * I->egroups];
+                S[j].sigT = &sigT[j * I->egroups];
+                S[j].locks = &locks[j * I->course_axial_intervals];
+            }
+    
+            // Initialize locks on the MIC
+            init_locks(I);
+
+            // Repack Table
+            table->values = values;
+            table->dx = dx;
+            table->maxVal = maxVal;
+            table->N = N;
+
+        }
+    }
+
+}
+#endif
+
+void get_structs(Input * I, Source * S, Table * table)
+{
+    int n_d = _Offload_number_of_devices();
+    int i;
+    
+}
+
 void run_kernel( Input * I, Source * S, Table * table)
 {
+
 	// Enter Parallel Region
 	#pragma omp parallel default(none) shared(I, S, table)
 	{
@@ -10,7 +101,7 @@ void run_kernel( Input * I, Source * S, Table * table)
 		#else
 		int thread = 0;
 		#endif
-
+        
 		// Create Thread Local Random Seed
 		unsigned int seed = time(NULL) * (thread+1);
 
@@ -51,7 +142,7 @@ void run_kernel( Input * I, Source * S, Table * table)
 
 			// Attenuate Segment
 			attenuate_segment( I, S, QSR_id, FAI_id, state_flux,
-					&simd_vecs, table);
+					    &simd_vecs, table);
 		}
 
 		// Stop PAPI Counters
@@ -70,6 +161,7 @@ void run_kernel( Input * I, Source * S, Table * table)
 		counter_stop(&eventset, num_papi_events, I);
 		#endif
 	}
+
 }
 
 void attenuate_segment( Input * restrict I, Source * restrict S,
@@ -112,6 +204,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	{
 		float * f2 = &S[QSR_id].fine_source[FAI_id*egroups]; 
 		float * f3 = &S[QSR_id].fine_source[(FAI_id+1)*egroups]; 
+
 		// cycle over energy groups
 		#ifdef INTEL
 		#pragma vector
@@ -121,12 +214,12 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		for( int g = 0; g < egroups; g++)
 		{
 			// load neighboring sources
-			const float y2 = f2[g];
-			const float y3 = f3[g];
+			float y2 = f2[g];
+			float y3 = f3[g];
 
 			// do linear "fitting"
-			const float c0 = y2;
-			const float c1 = (y3 - y2) / dz;
+			float c0 = y2;
+			float c1 = (y3 - y2) / dz;
 
 			// calculate q0, q1, q2
 			q0[g] = c0 + c1*zin;
@@ -147,12 +240,12 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		for( int g = 0; g < egroups; g++)
 		{
 			// load neighboring sources
-			const float y1 = f1[g];
-			const float y2 = f2[g];
+			float y1 = f1[g];
+			float y2 = f2[g];
 
 			// do linear "fitting"
-			const float c0 = y2;
-			const float c1 = (y2 - y1) / dz;
+			float c0 = y2;
+			float c1 = (y2 - y1) / dz;
 
 			// calculate q0, q1, q2
 			q0[g] = c0 + c1*zin;
@@ -174,23 +267,23 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		for( int g = 0; g < egroups; g++)
 		{
 			// load neighboring sources
-			const float y1 = f1[g]; 
-			const float y2 = f2[g];
-			const float y3 = f3[g];
+			float y1 = f1[g]; 
+			float y2 = f2[g];
+			float y3 = f3[g];
 
 			// do quadratic "fitting"
-			const float c0 = y2;
-			const float c1 = (y1 - y3) / (2.f*dz);
-			const float c2 = (y1 - 2.f*y2 + y3) / (2.f*dz*dz);
+			float c0 = y2;
+			float c1 = (y1 - y3) / (2.f*dz);
+			float c2 = (y1 - 2.f*y2 + y3) / (2.f*dz*dz);
 
 			// calculate q0, q1, q2
 			q0[g] = c0 + c1*zin + c2*zin*zin;
 			q1[g] = c1 + 2.f*c2*zin;
 			q2[g] = c2;
+
 		}
 	}
-
-
+    
 	// cycle over energy groups
 	#ifdef INTEL
 	#pragma vector
@@ -270,13 +363,14 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#endif
 	for( int g = 0; g < egroups; g++)
 	{
-		FSR_flux[g] += tally[g];
+		//FSR_flux[g] += tally[g];
 	}
 
 	#ifdef OPENMP
 	omp_unset_lock(S[QSR_id].locks + FAI_id);
 	#endif
 
+    /*
 	// Term 1
 	#ifdef INTEL
 	#pragma vector aligned
@@ -327,6 +421,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	{
 		state_flux[g] = t1[g] + t2[g] + t3[g] + t4[g];
 	}
+    */
 }	
 
 /* Interpolates a formed exponential table to compute ( 1- exp(-x) )
