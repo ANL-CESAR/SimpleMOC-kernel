@@ -42,12 +42,14 @@ int main( int argc, char * argv[] )
         return(2);
     }
 
+    printf("S[0].fine_flux[0] = %g\n", S[0].fine_flux[0]);
+
     char *signal = (char *) malloc(sizeof(char) * n_d);
     printf("Copying data to %d MICs...",n_d);
 	start = get_time();
     send_structs(I, S, table); 
 	stop = get_time();
-    printf("...done in %f seconds.\n",stop-start);
+    printf("done in %f seconds.\n",stop-start);
     #endif
 
     printf("Running kernel...");
@@ -69,17 +71,15 @@ int main( int argc, char * argv[] )
     #endif
 	stop = get_time();
     double kernel_time = stop-start;
-    printf("...done.\n");
+    printf("done.\n");
 
     #ifdef OFFLOAD
     printf("Copying from %d MICs...",n_d);
 	start = get_time();
-    send_structs(I, S, table); 
+    get_structs(I, S, table); 
 	stop = get_time();
-    printf("...done in %f seconds.\n",stop-start);
+    printf("done in %f seconds.\n",stop-start);
     #endif
-
-	printf("Simulation Complete.\n");
 
 	border_print();
 	center_print("RESULTS SUMMARY", 79);

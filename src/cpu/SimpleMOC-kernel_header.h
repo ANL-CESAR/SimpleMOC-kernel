@@ -82,18 +82,20 @@ typedef struct{
 } SIMD_Vectors;
 
 // kernel.c
-#ifdef OFFLOAD // Build for Xeon Phi Offload as well
+#ifdef OFFLOAD
 #pragma offload_attribute(push, target(mic))
 void send_structs(Input * I, Source * S, Table * table);
 void get_structs(Input * I, Source * S, Table * table);
 #endif
+
 void calc(Input *I, Source *S, Table * table);
 void run_kernel( Input * I, Source * S, Table * table);
 void attenuate_segment( Input * restrict I, Source * restrict S,
 		int QSR_id, int FAI_id, float * restrict state_flux,
 		SIMD_Vectors * restrict simd_vecs, Table * restrict table); 
 float interpolateTable( Table * table, float x);
-#ifdef OFFLOAD // Build for Xeon Phi Offload as well
+
+#ifdef OFFLOAD 
 #pragma offload_attribute(pop)
 #endif
 
@@ -101,6 +103,7 @@ float interpolateTable( Table * table, float x);
 #ifdef OFFLOAD // Build for Xeon Phi Offload as well
 #pragma offload_attribute(push, target(mic))
 #endif
+
 Source * aligned_initialize_sources( Input * I );
 Source * initialize_sources( Input * I );
 Table * buildExponentialTable( float precision, float maxVal );

@@ -73,8 +73,11 @@ void print_input_summary(Input * I)
 	center_print("INPUT SUMMARY", 79);
 	border_print();
 	#ifdef OPENMP
-	printf("%-25s%d\n", "Number of Threads:", I->nthreads);
+	printf("%-25s%d\n", "Number of Host Threads:", I->nthreads);
 	#endif
+    #ifdef OFFLOAD
+	printf("%-25s%d\n", "Available MICs:", _Offload_number_of_devices());
+    #endif
 	printf("%-25s%d\n", "Energy Groups:", I->egroups);
 	printf("%-25s%d\n", "Source Regions:", I->source_regions);
 	printf("%-25s%d\n", "Course Axial Intervals:", I->course_axial_intervals);

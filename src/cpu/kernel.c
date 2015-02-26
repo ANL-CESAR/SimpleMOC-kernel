@@ -70,8 +70,10 @@ void send_structs(Input * I, Source * S, Table * table)
                 S[j].sigT = &sigT[j * I->egroups];
                 S[j].locks = &locks[j * I->course_axial_intervals];
             }
+
+            S[0].fine_flux[0] = 12345.f;
     
-            // Initialize locks on the MIC
+            // Initialize omp locks on the MIC
             init_locks(I);
 
             // Repack Table
@@ -79,7 +81,6 @@ void send_structs(Input * I, Source * S, Table * table)
             table->dx = dx;
             table->maxVal = maxVal;
             table->N = N;
-
         }
     }
 
@@ -90,14 +91,39 @@ void send_structs(Input * I, Source * S, Table * table)
     free(signal);
 
 }
-#endif
 
 void get_structs(Input * I, Source * S, Table * table)
 {
     int n_d = _Offload_number_of_devices();
     int i;
+    char * signal = (char *) malloc(sizeof(char) * n_d); // Possibly add this into struct
+
+	float * fine_flux = S->fine_flux;
+	float * fine_source = S->fine_source;
+	float * sigT = S->sigT;
+
+    long fine_flux_N = I->source_regions * I->fine_axial_intervals * I->egroups;
+    long fine_source_N  = fine_flux_N;
+    long locks_N = I->source_regions * I->course_axial_intervals;
+    long sigT_N = I->source_regions * I->egroups;
+
+    for(i=0; i<n_d; i++){
+        #pragma offload_transfer target(mic:i) \
+        out( fine_flux[0:fine_flux_N] : FREE ) \
+        out( fine_source[0:fine_source_N] : FREE) \
+        out( sigT[0:sigT_N] : FREE ) \
+        signal(&signal[i])
+    }
     
+    // TODO: add in reduction operation; possibly copy into buffers first 
+
+    for(i=0; i<n_d; i++){
+        #pragma offload_wait target(mic:i) wait(&signal[i])
+    }
+
+    free(signal);
 }
+#endif // endif OFFLOAD
 
 void run_kernel( Input * I, Source * S, Table * table)
 {
@@ -110,7 +136,7 @@ void run_kernel( Input * I, Source * S, Table * table)
 		#else
 		int thread = 0;
 		#endif
-        
+            
 		// Create Thread Local Random Seed
 		unsigned int seed = time(NULL) * (thread+1);
 
@@ -234,12 +260,12 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		for( int g = 0; g < egroups; g++)
 		{
 			// load neighboring sources
-			float y2 = f2[g];
-			float y3 = f3[g];
+			const float y2 = f2[g];
+			const float y3 = f3[g];
 
 			// do linear "fitting"
-			float c0 = y2;
-			float c1 = (y3 - y2) / dz;
+			const float c0 = y2;
+			const float c1 = (y3 - y2) / dz;
 
 			// calculate q0, q1, q2
 			q0[g] = c0 + c1*zin;
@@ -260,12 +286,12 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		for( int g = 0; g < egroups; g++)
 		{
 			// load neighboring sources
-			float y1 = f1[g];
-			float y2 = f2[g];
+			const float y1 = f1[g];
+			const float y2 = f2[g];
 
 			// do linear "fitting"
-			float c0 = y2;
-			float c1 = (y2 - y1) / dz;
+			const float c0 = y2;
+			const float c1 = (y2 - y1) / dz;
 
 			// calculate q0, q1, q2
 			q0[g] = c0 + c1*zin;
@@ -287,14 +313,14 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 		for( int g = 0; g < egroups; g++)
 		{
 			// load neighboring sources
-			float y1 = f1[g]; 
-			float y2 = f2[g];
-			float y3 = f3[g];
+			const float y1 = f1[g]; 
+			const float y2 = f2[g];
+			const float y3 = f3[g];
 
 			// do quadratic "fitting"
-			float c0 = y2;
-			float c1 = (y1 - y3) / (2.f*dz);
-			float c2 = (y1 - 2.f*y2 + y3) / (2.f*dz*dz);
+			const float c0 = y2;
+			const float c1 = (y1 - y3) / (2.f*dz);
+			const float c2 = (y1 - 2.f*y2 + y3) / (2.f*dz*dz);
 
 			// calculate q0, q1, q2
 			q0[g] = c0 + c1*zin + c2*zin*zin;

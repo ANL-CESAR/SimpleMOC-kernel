@@ -15,11 +15,7 @@ OFFLOAD     = yes
 # Program name & source code list
 #===============================================================================
 
-ifeq ($(MIC),yes)
- program = SimpleMOC-kernel-mic
-else
- program = SimpleMOC-kernel
-endif
+program = SimpleMOC-kernel
 
 source = \
 main.c \
@@ -131,7 +127,7 @@ $(program): $(obj) SimpleMOC-kernel_header.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj)
+	rm -rf $(program) $(obj) *MIC.o
 
 edit:
 	vim -p $(source) SimpleMOC-kernel_header.h
