@@ -29,6 +29,9 @@ Organizations:     Computational Reactor Physics Group
 
 Development Leads: John Tramm     <jtramm@mit.edu>
                    Geoffrey Gunow <geogunow@mit.edu>
+                   Tim He         <shuohe@anl.gov>
+                   Ron Rahaman    <rahaman@anl.gov>
+                   Amanda Lund    <alund@anl.gov>
     
 ===============================================================================
 What is SimpleMOC-kernel?
