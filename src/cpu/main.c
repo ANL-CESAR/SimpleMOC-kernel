@@ -33,31 +33,51 @@ int main( int argc, char * argv[] )
 
 	double start, stop;
 
-	// Run Simulation Kernel Loop
-	start = get_time();
     #ifdef OFFLOAD
-    //int n_d = _Offload_number_of_devices(); 
-    int n_d = 1; 
+	// Run Simulation Kernel Loop
+    int n_d = _Offload_number_of_devices(); 
     int i;
     if(n_d < 1){
         printf("No devices available for offload\n");
         return(2);
     }
 
+    char *signal = (char *) malloc(sizeof(char) * n_d);
+    printf("Copying data to %d MICs...",n_d);
+	start = get_time();
     send_structs(I, S, table); 
+	stop = get_time();
+    printf("...done in %f seconds.\n",stop-start);
+    #endif
+
+    printf("Running kernel...");
+	start = get_time();
+    #ifdef OFFLOAD
     for(i=0; i<n_d; i++){
         #pragma offload target(mic:i) \
-        in(I[0:0], S[0:0], table[0:0])
+        in(I[0:0], S[0:0], table[0:0]) signal(&signal[i])
         {
 	        run_kernel(I, S, table);
         }
     }
-    get_structs(I, S, table);
 
+    for(i=0; i<n_d; i++){
+        #pragma offload_wait target(mic:i) wait(&signal[i])
+    }
     #else
 	run_kernel(I, S, table);
     #endif
 	stop = get_time();
+    double kernel_time = stop-start;
+    printf("...done.\n");
+
+    #ifdef OFFLOAD
+    printf("Copying from %d MICs...",n_d);
+	start = get_time();
+    send_structs(I, S, table); 
+	stop = get_time();
+    printf("...done in %f seconds.\n",stop-start);
+    #endif
 
 	printf("Simulation Complete.\n");
 
@@ -65,9 +85,9 @@ int main( int argc, char * argv[] )
 	center_print("RESULTS SUMMARY", 79);
 	border_print();
 
-	double tpi = ((double) (stop - start) /
+	double tpi = ((double) (kernel_time) /
 			(double)I->segments / (double) I->egroups) * 1.0e9;
-	printf("%-25s%.3lf seconds\n", "Runtime:", stop-start);
+	printf("%-25s%.3lf seconds\n", "Runtime:", kernel_time);
 	printf("%-25s%.3lf ns\n", "Time per Intersection:", tpi);
 	border_print();
 

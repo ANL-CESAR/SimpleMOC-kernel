@@ -33,6 +33,8 @@ void send_structs(Input * I, Source * S, Table * table)
     long locks_N = I->source_regions * I->course_axial_intervals;
     long sigT_N = I->source_regions * I->egroups;
 
+    char *signal = (char *) malloc(sizeof(char) * n_d);
+
     for(i=0; i<n_d; i++){
         #pragma offload target(mic:i) \
         nocopy(I : length(1) ALLOC) \
@@ -49,7 +51,8 @@ void send_structs(Input * I, Source * S, Table * table)
         in( fine_source[0:fine_source_N] : ALLOC ) \
         in( sigT[0:sigT_N] : ALLOC ) \
         in( values[0:(2*N)] : ALLOC ) \
-        in( dx, maxVal, N )
+        in( dx, maxVal, N ) \
+        signal(&signal[i])
         {
 
             // Repack Input    
@@ -79,6 +82,12 @@ void send_structs(Input * I, Source * S, Table * table)
 
         }
     }
+
+    for(i=0; i<n_d; i++){
+        #pragma offload_wait target(mic:i) wait(&signal[i])
+    }
+
+    free(signal);
 
 }
 #endif
@@ -131,8 +140,19 @@ void run_kernel( Input * I, Source * S, Table * table)
 		#endif
 
 		// Enter OMP For Loop over Segments
-		#pragma omp for schedule(dynamic,100)
-		for( long i = 0; i < I->segments; i++ )
+        #ifdef OFFLOAD
+        int n_d = _Offload_number_of_devices();
+        int mic_id = _Offload_get_device_number();
+
+        long start = mic_id * (I->segments / n_d);
+        long end = start + (I->segments / n_d);
+        #else
+        long start = 0;
+        long end = I->segments;
+        #endif
+		//#pragma omp for schedule(dynamic,100)
+		#pragma omp for schedule(dynamic)
+		for( long i = start; i < end; i++ )
 		{
 			// Pick Random QSR
 			int QSR_id = rand_r(&seed) % I->source_regions;
