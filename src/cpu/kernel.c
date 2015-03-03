@@ -18,9 +18,7 @@ void send_structs(Input * I, Source * S, Table * table)
 	float * fine_flux = S->fine_flux;
 	float * fine_source = S->fine_source;
 	float * sigT = S->sigT;
-	#ifdef OPENMP
 	omp_lock_t * locks = S->locks;
-	#endif
 
     // Unpack Table
 	float * values = table->values;
@@ -71,8 +69,6 @@ void send_structs(Input * I, Source * S, Table * table)
                 S[j].locks = &locks[j * I->course_axial_intervals];
             }
 
-            S[0].fine_flux[0] = 12345.f;
-    
             // Initialize omp locks on the MIC
             init_locks(I);
 
@@ -114,7 +110,7 @@ void get_structs(Input * I, Source * S, Table * table)
         out( sigT[0:sigT_N] : FREE ) \
         signal(&signal[i])
     }
-    
+
     // TODO: add in reduction operation; possibly copy into buffers first 
 
     for(i=0; i<n_d; i++){

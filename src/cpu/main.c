@@ -42,8 +42,6 @@ int main( int argc, char * argv[] )
         return(2);
     }
 
-    printf("S[0].fine_flux[0] = %g\n", S[0].fine_flux[0]);
-
     char *signal = (char *) malloc(sizeof(char) * n_d);
     printf("Copying data to %d MICs...",n_d);
 	start = get_time();

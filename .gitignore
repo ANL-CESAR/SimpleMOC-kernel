@@ -1,3 +1,5 @@
 *.o
 .*.sw*
 *~
+SimpleMOC-kernel
+SimpleMOC-kernel-mic
