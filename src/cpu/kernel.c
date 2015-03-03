@@ -6,14 +6,6 @@ void send_structs(Input * I, Source * S, Table * table)
     int n_d = _Offload_number_of_devices();
     int i,j;
 
-    // Unpack Input
-	int source_regions = I->source_regions;
-	int course_axial_intervals = I->course_axial_intervals;
-	int fine_axial_intervals = I->fine_axial_intervals;
-	long segments = I->segments;
-	int egroups = I->egroups;
-	int nthreads = I->nthreads;
-
     // Unpack Source
 	float * fine_flux = S->fine_flux;
 	float * fine_source = S->fine_source;
@@ -24,7 +16,7 @@ void send_structs(Input * I, Source * S, Table * table)
 	float * values = table->values;
 	float dx = table->dx;
 	float maxVal = table->maxVal;
-	int N = table->N * 2;
+	int N = table->N;
 
     long fine_flux_N = I->source_regions * I->fine_axial_intervals * I->egroups;
     long fine_source_N  = fine_flux_N;
@@ -35,15 +27,9 @@ void send_structs(Input * I, Source * S, Table * table)
 
     for(i=0; i<n_d; i++){
         #pragma offload target(mic:i) \
-        nocopy(I : length(1) ALLOC) \
+        in(I : length(1) ALLOC) \
         nocopy(S: length(I->source_regions)  ALLOC) \
         nocopy(table : length(1) ALLOC) \
-        in(source_regions, \
-           course_axial_intervals, \
-           fine_axial_intervals, \
-           segments, \
-           egroups, \
-           nthreads) \
         in( fine_flux[0:fine_flux_N] :  ALLOC ) \
         in( locks[0:locks_N] :  ALLOC ) \
         in( fine_source[0:fine_source_N] : ALLOC ) \
@@ -52,14 +38,6 @@ void send_structs(Input * I, Source * S, Table * table)
         in( dx, maxVal, N ) \
         signal(&signal[i])
         {
-
-            // Repack Input    
-            I->source_regions = source_regions;
-            I->course_axial_intervals = course_axial_intervals;
-            I->fine_axial_intervals = fine_axial_intervals;
-            I->segments = segments;
-            I->egroups = egroups;
-            I->nthreads = nthreads;
 
             // Repack Source
             for(j=0; j < I->source_regions; j++){
