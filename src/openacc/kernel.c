@@ -56,11 +56,11 @@ void run_kernel(
       ds, \
       randIdx[0:segments][0:2], \
       fine_source_arr[0:source_regions][0:fine_axial_intervals][0:egroups], \
-      sigT_arr[0:source_regions][0:egroups], \
-      ), \
+      sigT_arr[0:source_regions][0:egroups] \
+      ) \
   copy( \
       fine_flux_arr[0:source_regions][0:fine_axial_intervals][0:egroups], \
-      state_flux_arr[0:n_state_fluxes][0:egroups], \
+      state_flux_arr[0:n_state_fluxes][0:egroups] \
       )
   {
 
@@ -175,7 +175,7 @@ void run_kernel(
 
         tally = weight * flux_integral;
 
-#pragma acc atomic capture
+#pragma acc atomic update
         *FSR_flux += tally;
 
         // Terms 1, 2, 3, and 4

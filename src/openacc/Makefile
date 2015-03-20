@@ -125,7 +125,8 @@ ifeq ($(COMPILER),pgi)
 	#
 	# OpenACC (assumes NVIDA GPU)
   ifeq ($(ACC),yes)
-    CFLAGS += -acc -Minfo=accel -ta=tesla:ptxinfo -DACC
+    #CFLAGS += -acc -Minfo=accel -ta=tesla:ptxinfo -DACC
+    CFLAGS += -acc -Minfo=accel -DACC
   endif
 
   ifeq ($(DEBUG),yes)
