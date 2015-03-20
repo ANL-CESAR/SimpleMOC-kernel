@@ -2,13 +2,14 @@
 # User Options
 #===============================================================================
 
-COMPILER    = intel
-OPENMP      = yes
+COMPILER    = pgi
+OPENMP      = no
 OPTIMIZE    = yes
 DEBUG       = yes
 PROFILE     = no
 PAPI        = no
 MIC         = no
+ACC         = yes
 
 #===============================================================================
 # Program name & source code list
@@ -107,6 +108,33 @@ ifeq ($(COMPILER), ibm)
 	CFLAGS += -qsmp
 endif
    	CFLAGS += -DOPENMP
+endif
+
+# PGI Compiler
+ifeq ($(COMPILER),pgi)
+  CC = pgcc
+  CFLAGS = -c99 -Minform=warn
+
+  ifeq ($(OPTIMIZE),yes)
+    CFLAGS += -fast
+  endif
+
+  ifeq ($(VEC_INFO),yes)
+    CFLAGS += -Minfo=vect
+  endif
+	#
+	# OpenACC (assumes NVIDA GPU)
+  ifeq ($(ACC),yes)
+    CFLAGS += -acc -Minfo=accel -ta=tesla:ptxinfo -DACC
+  endif
+
+  ifeq ($(DEBUG),yes)
+    CFLAGS += -g
+  endif
+
+  ifeq ($(PROFILE),yes)
+    CFLAGS += -pg
+  endif
 endif
 
 

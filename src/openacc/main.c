@@ -4,10 +4,6 @@ int main( int argc, char * argv[] )
 {
 	int version = 2;
 
-	#ifdef PAPI
-	papi_serial_init();
-	#endif
-
 	srand(time(NULL));
 
 	Input * I = set_default_input();
@@ -15,17 +11,29 @@ int main( int argc, char * argv[] )
 
 	logo(version);
 
-	#ifdef OPENMP
-	omp_set_num_threads(I->nthreads); 
-	#endif
-
 	print_input_summary(I);
 
 	// Build Source Data
-	Source * S = initialize_sources(I); 
+  float (* fine_flux_arr   )[I->fine_axial_intervals][I->egroups];
+  float (* fine_source_arr )[I->fine_axial_intervals][I->egroups];
+  float (* sigT_arr        )[I->egroups];
+  initialize_sources(
+      I->source_regions,
+      I->fine_axial_intervals,
+      I->egroups,
+      fine_flux_arr,
+      fine_source_arr,
+      sigT_arr
+      );
+
+  float ( * state_flux_arr )[I->egroups];
+  initialize_state_flux( I->n_state_fluxes, I->egroups, state_flux_arr );
+
+  unsigned int ( * randIdx )[3];
+  initialize_randIdx( I->segments, randIdx );
 	
 	// Build Exponential Table
-	Table * table = buildExponentialTable( 0.01, 10.0 );
+	//Table * table = buildExponentialTable( 0.01, 10.0 );
 
 	center_print("SIMULATION", 79);
 	border_print();
@@ -35,7 +43,20 @@ int main( int argc, char * argv[] )
 
 	// Run Simulation Kernel Loop
 	start = get_time();
-	run_kernel(I, S, table);
+  run_kernel(
+      I->source_regions,
+      I->fine_axial_intervals,
+      I->segments,
+      I->egroups,
+      I->nthreads,
+      I->n_state_fluxes,
+      fine_flux_arr,
+      fine_source_arr,
+      sigT_arr,
+      state_flux_arr,
+      randIdx
+      );
+
 	stop = get_time();
 
 	printf("Simulation Complete.\n");

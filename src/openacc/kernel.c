@@ -8,17 +8,18 @@
 
 
 void run_kernel( 
-    int   _source_regions,
-    int   _fine_axial_intervals,
-    long  _segments,
-    int   _egroups,
-    int   _nthreads,
-    int   _n_state_fluxes,
-    float (* restrict fine_flux_arr)[_fine_axial_intervals][_egroups], 
-    float (* restrict fine_source_arr)[_fine_axial_intervals][_egroups],
-    float (* restrict sigT_arr)[_egroups],
-    float (* restrict state_flux_arr)[_egroups],
-    int   (* restrict randIdx)[3])
+    int      _source_regions,
+    int      _fine_axial_intervals,
+    long     _segments,
+    int      _egroups,
+    int      _nthreads,
+    int      _n_state_fluxes,
+    float    (* restrict fine_flux_arr)[_fine_axial_intervals][_egroups], 
+    float    (* restrict fine_source_arr)[_fine_axial_intervals][_egroups],
+    float    (* restrict sigT_arr)[_egroups],
+    float    (* restrict state_flux_arr)[_egroups],
+    unsigned (* restrict randIdx)[3]
+    )
 {
   const int source_regions = _source_regions;
   const int fine_axial_intervals = _fine_axial_intervals;
@@ -58,8 +59,8 @@ void run_kernel(
       sigT_arr[0:source_regions][0:egroups], \
       ), \
   copy( \
-      state_flux_arr[0:n_state_fluxes][0:egroups], \
       fine_flux_arr[0:source_regions][0:fine_axial_intervals][0:egroups], \
+      state_flux_arr[0:n_state_fluxes][0:egroups], \
       )
   {
 

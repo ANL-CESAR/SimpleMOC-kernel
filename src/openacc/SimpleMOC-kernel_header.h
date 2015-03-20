@@ -28,25 +28,8 @@ typedef struct{
 	long segments;
 	int egroups;
 	int nthreads;
-
-    #ifdef PAPI
-	int papi_event_set;
-    // String for command line PAPI event
-    char event_name[PAPI_MAX_STR_LEN]; 
-    // Array to accumulate PAPI counts across all threads
-    long long *vals_accum;
-    #endif
+  int n_state_fluxes;
 } Input;
-
-// Source Region Structure
-typedef struct{
-	float * fine_flux;
-	float * fine_source;
-	float * sigT;
-	#ifdef OPENMP
-	omp_lock_t * locks;
-	#endif
-} Source;
 
 // Table structure for computing exponential
 typedef struct{
@@ -75,15 +58,35 @@ typedef struct{
 } SIMD_Vectors;
 
 // kernel.c
-void run_kernel( Input * I, Source * S, Table * table);
-void attenuate_segment( Input * restrict I, Source * restrict S,
-		int QSR_id, int FAI_id, float * restrict state_flux,
-		SIMD_Vectors * restrict simd_vecs, Table * restrict table); 
-float interpolateTable( Table * table, float x);
-
+void run_kernel( 
+    int       _source_regions,
+    int       _fine_axial_intervals,
+    long      _segments,
+    int       _egroups,
+    int       _nthreads,
+    int       _n_state_fluxes,
+    float     (* restrict fine_flux_arr)[_fine_axial_intervals][_egroups], 
+    float     (* restrict fine_source_arr)[_fine_axial_intervals][_egroups],
+    float     (* restrict sigT_arr)[_egroups],
+    float     (* restrict state_flux_arr)[_egroups],
+    unsigned  (* restrict randIdx)[3]
+    );
 // init.c
-Source * aligned_initialize_sources( Input * I );
-Source * initialize_sources( Input * I );
+//Source * aligned_initialize_sources( Input * I );
+void initialize_sources( 
+    int source_regions, 
+    int fine_axial_intervals, 
+    int egroups,
+    float (*fine_flux_arr)[fine_axial_intervals][egroups],
+    float (*fine_source_arr)[fine_axial_intervals][egroups],
+    float (*sigT)[egroups]
+    );
+void initialize_state_flux( 
+    int n_state_fluxes, 
+    int egroups, 
+    float (* state_flux_arr)[egroups] 
+    );
+void initialize_randIdx( int segments, unsigned (*randIdx)[3]);
 Table * buildExponentialTable( float precision, float maxVal );
 Input * set_default_input( void );
 SIMD_Vectors aligned_allocate_simd_vectors(Input * I);
