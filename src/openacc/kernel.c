@@ -2,7 +2,7 @@
 
 // removed:
 //     SIMD_Vectors simd_vecs = allocate_simd_vectors(egroups);
-//     float * flux_state = (float *) malloc(
+//     float * state_flux = (float *) malloc(
 //         egroups * sizeof(float));
 
 
@@ -13,11 +13,11 @@ void run_kernel(
     long  _segments,
     int   _egroups,
     int   _nthreads,
-    int   _n_flux_states,
-    float (* restrict fine_flux)[_fine_axial_intervals][_egroups], 
-    float (* restrict fine_source)[_fine_axial_intervals][_egroups],
+    int   _n_state_fluxes,
+    float (* restrict fine_flux_arr)[_fine_axial_intervals][_egroups], 
+    float (* restrict fine_source_arr)[_fine_axial_intervals][_egroups],
     float (* restrict sigT_arr)[_egroups],
-    float (* restrict flux_states)[_egroups],
+    float (* restrict state_flux_arr)[_egroups],
     int   (* restrict randIdx)[3])
 {
   const int source_regions = _source_regions;
@@ -25,7 +25,7 @@ void run_kernel(
   const long segments = _segments;
   const int egroups = _egroups;
   const int nthreads = _nthreads;
-  const int n_flux_states = _n_flux_states;
+  const int n_state_fluxes = _n_state_fluxes;
 
   // Some placeholder constants - In the full app some of these are
   // calculated based off position in geometry. This treatment
@@ -41,13 +41,25 @@ void run_kernel(
   // Enter Parallel Region
 #pragma acc data \
   copyin(\
+      source_regions, \
+      fine_axial_intervals, \
+      segments, \
+      egroups, \
+      nthreads, \
+      n_state_fluxes, \
+      dz, \
+      zin, \
+      weight, \
+      mu, \
+      mu2, \
+      ds, \
       randIdx[0:segments][0:2], \
-      fine_flux[0:source_regions][0:fine_axial_intervals][0:egroups], \
-      fine_source[0:source_regions][0:fine_axial_intervals][0:egroups], \
+      fine_source_arr[0:source_regions][0:fine_axial_intervals][0:egroups], \
       sigT_arr[0:source_regions][0:egroups], \
       ), \
   copy( \
-      flux_states[0:n_flux_states][0:egroups], \
+      state_flux_arr[0:n_state_fluxes][0:egroups], \
+      fine_flux_arr[0:source_regions][0:fine_axial_intervals][0:egroups], \
       )
   {
 
@@ -56,10 +68,10 @@ void run_kernel(
     for( long i = 0; i < segments; i++ )
     {
       // Pick random state flux vector
-      const int FS_id = randIdx[i][0] % n_flux_states;
+      const int SF_id = randIdx[i][0] % n_state_fluxes;
 
       // Pick Random QSR
-      const int SR_id = randIdx[i][1] % source_regions;
+      const int QSR_id = randIdx[i][1] % source_regions;
 
       // Pick Random Fine Axial Interval
       const int FAI_id = randIdx[i][2] % fine_axial_intervals;
@@ -69,7 +81,7 @@ void run_kernel(
       {
 
         // Attenuate Segment
-        //attenuate_segment( I, S, QSR_id, FAI_id, flux_state,
+        //attenuate_segment( I, S, QSR_id, FAI_id, state_flux,
         //    &simd_vecs, table);
         // Unload local vector vectors
         float q0;
@@ -88,16 +100,16 @@ void run_kernel(
         float t4;
 
         // Pointer to the state flux
-        float * flux_state = flux_states[FS_id] + g;
+        float * state_flux = &state_flux_arr[SF_id][g];
 
         // Pointer to fine source region flux
-        float * FSR_flux = fine_flux[SR_id][FAI_id] + g;
+        float * FSR_flux = &fine_flux_arr[QSR_id][FAI_id][g];
 
         if( FAI_id == 0 )
         {
           // load neighboring sources
-          const float y2 = fine_source[SR_id][FAI_id  ][g];
-          const float y3 = fine_source[SR_id][FAI_id+1][g];
+          const float y2 = fine_source_arr[QSR_id][FAI_id  ][g];
+          const float y3 = fine_source_arr[QSR_id][FAI_id+1][g];
 
           // do linear "fitting"
           const float c0 = y2;
@@ -111,8 +123,8 @@ void run_kernel(
         else if ( FAI_id == fine_axial_intervals - 1 )
         {
           // load neighboring sources
-          const float y1 = fine_source[SR_id][FAI_id-1][g];
-          const float y2 = fine_source[SR_id][FAI_id  ][g];
+          const float y1 = fine_source_arr[QSR_id][FAI_id-1][g];
+          const float y2 = fine_source_arr[QSR_id][FAI_id  ][g];
 
           // do linear "fitting"
           const float c0 = y2;
@@ -126,9 +138,9 @@ void run_kernel(
         else
         {
           // load neighboring sources
-          const float y1 = fine_source[SR_id][FAI_id-1][g];
-          const float y2 = fine_source[SR_id][FAI_id  ][g];
-          const float y3 = fine_source[SR_id][FAI_id+1][g];
+          const float y1 = fine_source_arr[QSR_id][FAI_id-1][g];
+          const float y2 = fine_source_arr[QSR_id][FAI_id  ][g];
+          const float y3 = fine_source_arr[QSR_id][FAI_id+1][g];
 
           // do quadratic "fitting"
           const float c0 = y2;
@@ -142,7 +154,7 @@ void run_kernel(
         }
 
         // load total cross section
-        sigT = sigT_arr[SR_id][g];
+        sigT = sigT_arr[QSR_id][g];
 
         // calculate common values for efficiency
         tau = sigT * ds;
@@ -155,33 +167,25 @@ void run_kernel(
         reuse = tau * (tau - 2.f) + 2.f * expVal / (sigT * sigT2); 
         //
         // add contribution to new source flux
-        flux_integral = (q0 * tau + (sigT * *flux_state - q0) * expVal) 
+        flux_integral = (q0 * tau + (sigT * *state_flux - q0) * expVal) 
           / sigT2 + q1 * mu * reuse + q2 * mu2 
           * (tau * (tau * (tau - 3.f) + 6.f) - 6.f * expVal) 
           / (3.f * sigT2 * sigT2);
-      }
 
-      tally = weight * flux_integral;
+        tally = weight * flux_integral;
 
-      // WHAT TO DO HERE?
-#ifdef OPENMP
-      omp_set_lock(S[QSR_id].locks + FAI_id);
-#endif
-      for( int g = 0; g < egroups; g++)
-      {
-        FSR_flux[g] += tally[g];
-      }
-#ifdef OPENMP
-      omp_unset_lock(S[QSR_id].locks + FAI_id);
-#endif
+#pragma acc atomic capture
+        *FSR_flux += tally;
 
-      // Terms 1, 2, 3, and 4
-      t1 = q0 * expVal / sigT;  
-      t2 = q1 * mu * (tau - expVal) / sigT2; 
-      t3 =	q2 * mu2 * reuse;
-      t4 = flux_state * (1.f - expVal);
+        // Terms 1, 2, 3, and 4
+        t1 = q0 * expVal / sigT;  
+        t2 = q1 * mu * (tau - expVal) / sigT2; 
+        t3 =	q2 * mu2 * reuse;
+        t4 = *state_flux * (1.f - expVal);
 
-      *flux_state = t1 + t2 + t3 + t4;
-    }
-  }
-}
+        *state_flux = t1 + t2 + t3 + t4;
+
+      } // END: for (int g=0; g < egroups; g++) 
+    } // END: for( long i = 0; i < segments; i++ )
+  } // END: #pragma acc data ...
+} // END: void run_kernel( ... )
