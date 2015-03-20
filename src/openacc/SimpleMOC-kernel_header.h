@@ -59,16 +59,16 @@ typedef struct{
 
 // kernel.c
 void run_kernel( 
-    int       _source_regions,
-    int       _fine_axial_intervals,
-    long      _segments,
-    int       _egroups,
-    int       _nthreads,
-    int       _n_state_fluxes,
-    float     (* restrict fine_flux_arr)[_fine_axial_intervals][_egroups], 
-    float     (* restrict fine_source_arr)[_fine_axial_intervals][_egroups],
-    float     (* restrict sigT_arr)[_egroups],
-    float     (* restrict state_flux_arr)[_egroups],
+    int       source_regions,
+    int       fine_axial_intervals,
+    long      segments,
+    int       egroups,
+    int       nthreads,
+    int       n_state_fluxes,
+    float     (* restrict fine_flux_arr)[fine_axial_intervals][egroups], 
+    float     (* restrict fine_source_arr)[fine_axial_intervals][egroups],
+    float     (* restrict sigT_arr)[egroups],
+    float     (* restrict state_flux_arr)[egroups],
     unsigned  (* restrict randIdx)[3]
     );
 // init.c

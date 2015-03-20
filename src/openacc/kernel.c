@@ -8,26 +8,19 @@
 
 
 void run_kernel( 
-    int      _source_regions,
-    int      _fine_axial_intervals,
-    long     _segments,
-    int      _egroups,
-    int      _nthreads,
-    int      _n_state_fluxes,
-    float    (* restrict fine_flux_arr)[_fine_axial_intervals][_egroups], 
-    float    (* restrict fine_source_arr)[_fine_axial_intervals][_egroups],
-    float    (* restrict sigT_arr)[_egroups],
-    float    (* restrict state_flux_arr)[_egroups],
+    int      source_regions,
+    int      fine_axial_intervals,
+    long     segments,
+    int      egroups,
+    int      nthreads,
+    int      n_state_fluxes,
+    float    (* restrict fine_flux_arr)[fine_axial_intervals][egroups], 
+    float    (* restrict fine_source_arr)[fine_axial_intervals][egroups],
+    float    (* restrict sigT_arr)[egroups],
+    float    (* restrict state_flux_arr)[egroups],
     unsigned (* restrict randIdx)[3]
     )
 {
-  const int source_regions = _source_regions;
-  const int fine_axial_intervals = _fine_axial_intervals;
-  const long segments = _segments;
-  const int egroups = _egroups;
-  const int nthreads = _nthreads;
-  const int n_state_fluxes = _n_state_fluxes;
-
   // Some placeholder constants - In the full app some of these are
   // calculated based off position in geometry. This treatment
   // shaves off a few FLOPS, but is not significant compared to the
@@ -65,8 +58,9 @@ void run_kernel(
   {
 
     // Enter OMP For Loop over Segments
+    const long _segments = segments;
 #pragma acc kernels for
-    for( long i = 0; i < segments; i++ )
+    for( long i = 0; i < _segments; i++ )
     {
       // Pick random state flux vector
       const int SF_id = randIdx[i][0] % n_state_fluxes;
@@ -77,10 +71,10 @@ void run_kernel(
       // Pick Random Fine Axial Interval
       const int FAI_id = randIdx[i][2] % fine_axial_intervals;
 
+      const int _egroups = egroups;
 #pragma acc for
-      for (int g=0; g < egroups; g++) 
+      for (int g=0; g < _egroups; g++) 
       {
-
         // Attenuate Segment
         //attenuate_segment( I, S, QSR_id, FAI_id, state_flux,
         //    &simd_vecs, table);
