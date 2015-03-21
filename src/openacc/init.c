@@ -33,7 +33,7 @@ void initialize_sources(
 {
 
 	// Allocate Fine Source Data
-  fine_flux_arr = (float (*)[fine_axial_intervals][egroups])
+  fine_source_arr = (float (*)[fine_axial_intervals][egroups])
     malloc( source_regions * fine_axial_intervals * egroups * sizeof(float));
 
 	// Allocate Fine Flux Data
@@ -82,7 +82,7 @@ void initialize_randIdx( int segments, unsigned (*randIdx)[3] )
     malloc(segments * 3 * sizeof(unsigned));
 
   for (int i = 0; i < segments; i++)
-    for (int j = 0; j < segments;  j++)
+    for (int j = 0; j < 3;  j++)
       randIdx[i][j] = (unsigned) rand();
 
   return;

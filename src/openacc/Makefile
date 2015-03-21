@@ -4,12 +4,12 @@
 
 COMPILER    = pgi
 OPENMP      = no
-OPTIMIZE    = yes
+OPTIMIZE    = no
 DEBUG       = yes
 PROFILE     = no
 PAPI        = no
 MIC         = no
-ACC         = yes
+ACC         = no
 
 #===============================================================================
 # Program name & source code list
@@ -122,15 +122,13 @@ ifeq ($(COMPILER),pgi)
   ifeq ($(VEC_INFO),yes)
     CFLAGS += -Minfo=vect
   endif
-	#
 	# OpenACC (assumes NVIDA GPU)
   ifeq ($(ACC),yes)
-    #CFLAGS += -acc -Minfo=accel -ta=tesla:ptxinfo -DACC
-    CFLAGS += -acc -Minfo=accel -DACC
+    CFLAGS += -acc -Minfo=accel -ta=tesla:ptxinfo -DACC
   endif
 
   ifeq ($(DEBUG),yes)
-    CFLAGS += -g
+    CFLAGS += -g -Mbounds
   endif
 
   ifeq ($(PROFILE),yes)
