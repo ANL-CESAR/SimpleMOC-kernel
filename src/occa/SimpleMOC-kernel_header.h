@@ -24,6 +24,7 @@ typedef struct{
   int fine_axial_intervals;
   long segments;
   int egroups;
+  int batch_size;
   int nthreads;
   int streams;
 } Input;

@@ -17,7 +17,8 @@ int main( int argc, char * argv[] )
   border_print();
 
   // Setup OCCA device and info
-  int outer_dim = sqrt(I.segments);
+  int batch_dim = I.batch_size;
+  int outer_dim = ((I.segments + (batch_dim - 1))/ batch_dim);
   int inner_dim = I.egroups;
 
   const char *device_infos = "mode = CUDA, deviceID = 0";
@@ -25,9 +26,9 @@ int main( int argc, char * argv[] )
   occaDevice device = occaGetDevice(device_infos);
 
   occaKernelInfo kinfo = occaCreateKernelInfo();
-  occaKernelInfoAddDefine(kinfo, "outerDim0", occaLong(outer_dim));
-  occaKernelInfoAddDefine(kinfo, "outerDim1", occaLong(outer_dim));
-  occaKernelInfoAddDefine(kinfo, "innerDim0", occaLong(inner_dim));
+  occaKernelInfoAddDefine(kinfo, "outerDim", occaLong(outer_dim));
+  occaKernelInfoAddDefine(kinfo, "innerDim", occaLong(inner_dim));
+  occaKernelInfoAddDefine(kinfo, "batchDim", occaLong(batch_dim));
 
   // Build OCCA kernel
   occaKernel run_kernel = occaBuildKernelFromSource(device,

@@ -7,7 +7,7 @@ void logo(int version)
 	printf(
 "   __           __        ___        __   __           ___  __        ___     \n"
 "  /__` |  |\\/| |__) |    |__   |\\/| /  \\ /  ` __ |__/ |__  |__) |\\ | |__  |   \n"
-"  .__/ |  |  | |    |___ |___  |  | \\__/ \\__,    |  \\ |___ |  \\ | \\| |___ |___\n" 
+"  .__/ |  |  | |    |___ |___  |  | \\__/ \\__,    |  \\ |___ |  \\ | \\| |___ |___\n"
 "\n"
 "                         ██████╗  ██████╗ ██████╗ █████╗ \n"
 "                        ██╔═══██╗██╔════╝██╔════╝██╔══██╗\n"
@@ -84,6 +84,7 @@ void print_input_summary(Input I)
 	printf("%-25s%d\n", "Course Axial Intervals:", I.course_axial_intervals);
 	printf("%-25s%d\n", "Fine Axial Intervals:", I.fine_axial_intervals);
 	printf("%-25s", "Segments:"); fancy_int(I.segments);
+	printf("%-25s", "Batch Size:"); fancy_int(I.batch_size);
 	printf("%-25s", "Random Number Streams:"); fancy_int(I.streams);
 	border_print();
 }
@@ -91,13 +92,13 @@ void print_input_summary(Input I)
 // reads command line inputs and applies options
 void read_CLI( int argc, char * argv[], Input * input )
 {
-	// defaults to max threads on the system	
+	// defaults to max threads on the system
 	#ifdef OPENMP
 	input->nthreads = omp_get_num_procs();
 	#else
 	input->nthreads = 1;
 	#endif
-	
+
 	// Collect Raw Input
 	for( int i = 1; i < argc; i++ )
 	{
@@ -120,12 +121,21 @@ void read_CLI( int argc, char * argv[], Input * input )
 			else
 				print_CLI_error();
 		}
-		
+
 		// egroups (-e)
 		else if( strcmp(arg, "-e") == 0 )
 		{
 			if( ++i < argc )
 				input->egroups = atoi(argv[i]);
+			else
+				print_CLI_error();
+		}
+
+		// egroups (-e)
+		else if( strcmp(arg, "-b") == 0 )
+		{
+			if( ++i < argc )
+				input->batch_size = atoi(argv[i]);
 			else
 				print_CLI_error();
 		}

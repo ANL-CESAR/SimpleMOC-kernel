@@ -11,6 +11,7 @@ Input set_default_input( void )
   I.segments = 50000000;
   I.egroups = 128;
   I.streams = 10000;
+  I.batch_size = 100;
 
   return I;
 }
