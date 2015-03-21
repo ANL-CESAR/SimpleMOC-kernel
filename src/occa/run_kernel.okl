@@ -102,9 +102,6 @@ occaKernel void run_kernel(
     barrier(localMemFence);
 
     for(int batch = 0; batch < batchDim; ++batch){
-      if( (batch + (outerId * batchDim)) >= I.segments )
-        continue;
-
       for (int innerId = 0; innerId < innerDim; ++innerId; inner0){
         const int g = innerId; // Each energy group (g) is one thread in a block
 
@@ -124,18 +121,11 @@ occaKernel void run_kernel(
         // (We are not concerned with coherency here as in actual
         // program threads would be organized in a more specific order)
 
-        const int randIdx_r0 = randIdx[3*batch + 0];
-        const int randIdx_r1 = randIdx[3*batch + 1];
-        const int randIdx_r2 = randIdx[3*batch + 2];
+        float *state_flux_ptr = randIdx[3*batch + 0] + state_fluxes;
+        const int QSR_id      = randIdx[3*batch + 1]; // Pick Random QSR
+        const int FAI_id      = randIdx[3*batch + 2]; // Pick Random Fine Axial Interval
 
-        float *state_flux_ptr  = state_fluxes + randIdx_r0;
         const float state_flux = directLoad(&state_flux_ptr[g]);
-
-        // Pick Random QSR
-        const int QSR_id = randIdx_r1;
-
-        // Pick Random Fine Axial Interval
-        const int FAI_id = randIdx_r2;
 
         //////////////////////////////////////////////////////////
         // Attenuate Segment
@@ -164,54 +154,51 @@ occaKernel void run_kernel(
 
         float * FSR_flux = &SA_fine_flux_arr[S_fine_flux_off + g];
 
-        if( FAI_id == 0 )
-          {
-            float y2 = directLoad(&SA_fine_source_arr[S_fine_source_off + (0 * egroups) + g]);
-            float y3 = directLoad(&SA_fine_source_arr[S_fine_source_off + (1 * egroups) + g]);
+        if( FAI_id == 0 ){
+          float y2 = directLoad(&SA_fine_source_arr[S_fine_source_off + (0 * egroups) + g]);
+          float y3 = directLoad(&SA_fine_source_arr[S_fine_source_off + (1 * egroups) + g]);
 
-            // do linear "fitting"
-            float c0 = y2;
-            float c1 = (y3 - y2) / dz;
+          // do linear "fitting"
+          float c0 = y2;
+          float c1 = (y3 - y2) / dz;
 
-            // calculate q0, q1, q2
-            q0 = c0 + c1*zin;
-            q1 = c1;
-            q2 = 0;
-          }
-        else if ( FAI_id == I.fine_axial_intervals - 1 )
-          {
-            // cycle over energy groups
-            // load neighboring sources
-            float y1 = directLoad(&SA_fine_source_arr[S_fine_source_off - (1 * egroups) + g]);
-            float y2 = directLoad(&SA_fine_source_arr[S_fine_source_off + (0 * egroups) + g]);
+          // calculate q0, q1, q2
+          q0 = c0 + c1*zin;
+          q1 = c1;
+          q2 = 0;
+        }
+        else if( FAI_id == (I.fine_axial_intervals - 1) ){
+          // cycle over energy groups
+          // load neighboring sources
+          float y1 = directLoad(&SA_fine_source_arr[S_fine_source_off - (1 * egroups) + g]);
+          float y2 = directLoad(&SA_fine_source_arr[S_fine_source_off + (0 * egroups) + g]);
 
-            // do linear "fitting"
-            float c0 = y2;
-            float c1 = (y2 - y1) / dz;
+          // do linear "fitting"
+          float c0 = y2;
+          float c1 = (y2 - y1) / dz;
 
-            // calculate q0, q1, q2
-            q0 = c0 + c1*zin;
-            q1 = c1;
-            q2 = 0;
-          }
-        else
-          {
-            // cycle over energy groups
-            // load neighboring sources
-            float y1 = directLoad(&SA_fine_source_arr[S_fine_source_off - (1 * egroups) + g]);
-            float y2 = directLoad(&SA_fine_source_arr[S_fine_source_off + (0 * egroups) + g]);
-            float y3 = directLoad(&SA_fine_source_arr[S_fine_source_off + (1 * egroups) + g]);
+          // calculate q0, q1, q2
+          q0 = c0 + c1*zin;
+          q1 = c1;
+          q2 = 0;
+        }
+        else{
+          // cycle over energy groups
+          // load neighboring sources
+          float y1 = directLoad(&SA_fine_source_arr[S_fine_source_off - (1 * egroups) + g]);
+          float y2 = directLoad(&SA_fine_source_arr[S_fine_source_off + (0 * egroups) + g]);
+          float y3 = directLoad(&SA_fine_source_arr[S_fine_source_off + (1 * egroups) + g]);
 
-            // do quadratic "fitting"
-            float c0 = y2;
-            float c1 = (y1 - y3) / (2.f*dz);
-            float c2 = (y1 - 2.f*y2 + y3) / (2.f*dz*dz);
+          // do quadratic "fitting"
+          float c0 = y2;
+          float c1 = (y1 - y3) / (2.f*dz);
+          float c2 = (y1 - 2.f*y2 + y3) / (2.f*dz*dz);
 
-            // calculate q0, q1, q2
-            q0 = c0 + c1*zin + c2*zin*zin;
-            q1 = c1 + 2.f*c2*zin;
-            q2 = c2;
-          }
+          // calculate q0, q1, q2
+          q0 = c0 + c1*zin + c2*zin*zin;
+          q1 = c1 + 2.f*c2*zin;
+          q2 = c2;
+        }
 
         // calculate common values for efficiency
         tau   = sigT * ds;

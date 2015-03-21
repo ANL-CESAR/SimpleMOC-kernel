@@ -16,9 +16,11 @@ int main( int argc, char * argv[] )
   center_print("INITIALIZATION", 79);
   border_print();
 
+  assert((I.segments % I.batch_size) == 0);
+
   // Setup OCCA device and info
   int batch_dim = I.batch_size;
-  int outer_dim = ((I.segments + (batch_dim - 1))/ batch_dim);
+  int outer_dim = (I.segments / batch_dim);
   int inner_dim = I.egroups;
 
   const char *device_infos = "mode = CUDA, deviceID = 0";
