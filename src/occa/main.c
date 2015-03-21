@@ -24,7 +24,7 @@ int main( int argc, char * argv[] )
   /* const char *device_infos = "mode = OpenMP"; */
   occaDevice device = occaGetDevice(device_infos);
 
-  occaKernelInfo kinfo = occaGenKernelInfo();
+  occaKernelInfo kinfo = occaCreateKernelInfo();
   occaKernelInfoAddDefine(kinfo, "outerDim0", occaLong(outer_dim));
   occaKernelInfoAddDefine(kinfo, "outerDim1", occaLong(outer_dim));
   occaKernelInfoAddDefine(kinfo, "innerDim0", occaLong(inner_dim));

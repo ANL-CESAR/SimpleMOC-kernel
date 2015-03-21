@@ -12,6 +12,8 @@ BENCHMARK   = no
 # Program name & source code list
 #===============================================================================
 
+include ${OCCA_DIR}/scripts/makefile
+
 program = SimpleMOC-kernel
 
 source = \
@@ -28,6 +30,7 @@ obj = $(source:.c=.o)
 # Regular gcc Compiler
 ifeq ($(COMPILER),gcc)
   CC = gcc
+  CXX = g++
 endif
 
 # Standard Flags
@@ -56,10 +59,10 @@ endif
 #===============================================================================
 
 $(program): $(obj) SimpleMOC-kernel_header.h
-	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
+	$(CXX) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CXX) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)

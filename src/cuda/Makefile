@@ -5,7 +5,7 @@
 COMPILER    = nvcc
 OPTIMIZE    = yes
 DEBUG       = no
-PROFILE     = no
+PROFILE     = yes
 BENCHMARK   = no
 
 #===============================================================================
