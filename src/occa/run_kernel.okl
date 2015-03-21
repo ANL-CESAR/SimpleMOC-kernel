@@ -236,8 +236,7 @@ occaKernel void run_kernel(
         tally = weight * flux_integral;
 
         // SHOULD BE ATOMIC HERE!
-        *FSR_flux += tally;
-        // atomicAdd(FSR_flux, tally);
+        atomicAdd(&FSR_flux[g], (float) tally);
 
         // Terms 1, 2, 3, and 4
         const float t1 = q0 * expVal / sigT;
