@@ -26,22 +26,22 @@ void initialize_sources(
     int source_regions, 
     int fine_axial_intervals, 
     int egroups,
-    float (*fine_flux_arr)[fine_axial_intervals][egroups],
-    float (*fine_source_arr)[fine_axial_intervals][egroups],
-    float (*sigT_arr)[egroups]
+    float (**fine_flux_arr)[fine_axial_intervals][egroups],
+    float (**fine_source_arr)[fine_axial_intervals][egroups],
+    float (**sigT_arr)[egroups]
     )
 {
 
 	// Allocate Fine Source Data
-  fine_source_arr = (float (*)[fine_axial_intervals][egroups])
+  *fine_source_arr = (float (*)[fine_axial_intervals][egroups])
     malloc( source_regions * fine_axial_intervals * egroups * sizeof(float));
 
 	// Allocate Fine Flux Data
-  fine_flux_arr = (float (*)[fine_axial_intervals][egroups]) 
+  *fine_flux_arr = (float (*)[fine_axial_intervals][egroups]) 
     malloc( source_regions * fine_axial_intervals * egroups * sizeof(float));
 
 	// Allocate SigT
-  sigT_arr = (float (*)[egroups]) 
+  *sigT_arr = (float (*)[egroups]) 
     malloc( source_regions * egroups * sizeof(float));
 
 	// Initialize fine source and flux to random numbers
@@ -49,14 +49,14 @@ void initialize_sources(
 		for( int j = 0; j < fine_axial_intervals; j++ )
 			for( int k = 0; k < egroups; k++ )
 			{
-				fine_flux_arr[i][j][k] = (float) rand() / RAND_MAX;
-				fine_source_arr[i][j][k] = (float) rand() / RAND_MAX;
+				(*fine_flux_arr)[i][j][k] = (float) rand() / RAND_MAX;
+				(*fine_source_arr)[i][j][k] = (float) rand() / RAND_MAX;
 			}
 
 	// Initialize SigT Values
 	for( int i = 0; i < source_regions; i++ )
 		for( int j = 0; j < egroups; j++ )
-			sigT_arr[i][j] = (float) rand() / RAND_MAX;
+			(*sigT_arr)[i][j] = (float) rand() / RAND_MAX;
 
 	return;
 }
@@ -64,26 +64,26 @@ void initialize_sources(
 void initialize_state_flux( 
     int n_state_fluxes, 
     int egroups, 
-    float (* state_flux_arr)[egroups] 
+    float (**state_flux_arr)[egroups] 
     )
 {
-  state_flux_arr = (float (*)[egroups]) 
+  *state_flux_arr = (float (*)[egroups]) 
     malloc(n_state_fluxes * egroups * sizeof(float));
 
   for (int i = 0; i < n_state_fluxes; i++)
     for (int j = 0; j < egroups; j++)
-      state_flux_arr[i][j] = (float) rand() / RAND_MAX;
+      (*state_flux_arr)[i][j] = (float) rand() / RAND_MAX;
 }
 
 
-void initialize_randIdx( int segments, unsigned (*randIdx)[3] )
+void initialize_randIdx( int segments, unsigned (**randIdx)[3] )
 {
-  randIdx = (unsigned (*)[3]) 
+  *randIdx = (unsigned (*)[3]) 
     malloc(segments * 3 * sizeof(unsigned));
 
   for (int i = 0; i < segments; i++)
     for (int j = 0; j < 3;  j++)
-      randIdx[i][j] = (unsigned) rand();
+      (*randIdx)[i][j] = (unsigned) rand();
 
   return;
 }

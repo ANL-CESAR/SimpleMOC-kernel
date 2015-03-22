@@ -14,6 +14,7 @@ int main( int argc, char * argv[] )
 	print_input_summary(I);
 
 	// Build Source Data
+  printf("Initializing source data...\n");
   float (* fine_flux_arr   )[I->fine_axial_intervals][I->egroups];
   float (* fine_source_arr )[I->fine_axial_intervals][I->egroups];
   float (* sigT_arr        )[I->egroups];
@@ -21,16 +22,25 @@ int main( int argc, char * argv[] )
       I->source_regions,
       I->fine_axial_intervals,
       I->egroups,
-      fine_flux_arr,
-      fine_source_arr,
-      sigT_arr
+      &fine_flux_arr,
+      &fine_source_arr,
+      &sigT_arr
       );
 
+  printf("Initializing state fluxes...\n");
   float ( * state_flux_arr )[I->egroups];
-  initialize_state_flux( I->n_state_fluxes, I->egroups, state_flux_arr );
+  initialize_state_flux( 
+      I->n_state_fluxes, 
+      I->egroups, 
+      &state_flux_arr 
+      );
 
+  printf("Initializing random numbers...\n");
   unsigned int ( * randIdx )[3];
-  initialize_randIdx( I->segments, randIdx );
+  initialize_randIdx( 
+      I->segments, 
+      &randIdx 
+      );
 	
 	// Build Exponential Table
 	//Table * table = buildExponentialTable( 0.01, 10.0 );
