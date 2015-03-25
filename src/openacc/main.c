@@ -15,9 +15,9 @@ int main( int argc, char * argv[] )
 
 	// Build Source Data
   printf("Initializing source data...\n");
-  float (* fine_flux_arr   )[I->fine_axial_intervals][I->egroups];
-  float (* fine_source_arr )[I->fine_axial_intervals][I->egroups];
-  float (* sigT_arr        )[I->egroups];
+  float (* restrict fine_flux_arr   )[I->fine_axial_intervals][I->egroups];
+  float (* restrict fine_source_arr )[I->fine_axial_intervals][I->egroups];
+  float (* restrict sigT_arr        )[I->egroups];
   initialize_sources(
       I->source_regions,
       I->fine_axial_intervals,
@@ -28,7 +28,7 @@ int main( int argc, char * argv[] )
       );
 
   printf("Initializing state fluxes...\n");
-  float ( * state_flux_arr )[I->egroups];
+  float ( * restrict state_flux_arr )[I->egroups];
   initialize_state_flux( 
       I->n_state_fluxes, 
       I->egroups, 
@@ -36,7 +36,7 @@ int main( int argc, char * argv[] )
       );
 
   printf("Initializing random numbers...\n");
-  unsigned int ( * randIdx )[3];
+  unsigned int ( * restrict randIdx )[3];
   initialize_randIdx( 
       I->segments, 
       &randIdx 

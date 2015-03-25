@@ -178,7 +178,7 @@ void run_kernel(
         t3 =	q2 * mu2 * reuse;
         t4 = *state_flux * (1.f - expVal);
 
-        *state_flux = t1 + t2 + t3 + t4;
+        //*state_flux = t1 + t2 + t3 + t4;
 
       } // END: for (int g=0; g < egroups; g++) 
     } // END: for( long i = 0; i < segments; i++ )

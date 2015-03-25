@@ -77,16 +77,19 @@ void initialize_sources(
     int source_regions, 
     int fine_axial_intervals, 
     int egroups,
-    float (**fine_flux_arr)[fine_axial_intervals][egroups],
-    float (**fine_source_arr)[fine_axial_intervals][egroups],
-    float (**sigT)[egroups]
+    float (* restrict * fine_flux_arr)[fine_axial_intervals][egroups],
+    float (* restrict * fine_source_arr)[fine_axial_intervals][egroups],
+    float (* restrict * sigT)[egroups]
     );
 void initialize_state_flux( 
     int n_state_fluxes, 
     int egroups, 
-    float (** state_flux_arr)[egroups] 
+    float (* restrict * state_flux_arr)[egroups] 
     );
-void initialize_randIdx( int segments, unsigned (**randIdx)[3]);
+void initialize_randIdx( 
+    int segments, 
+    unsigned (* restrict * randIdx)[3]
+    );
 Table * buildExponentialTable( float precision, float maxVal );
 Input * set_default_input( void );
 SIMD_Vectors aligned_allocate_simd_vectors(Input * I);

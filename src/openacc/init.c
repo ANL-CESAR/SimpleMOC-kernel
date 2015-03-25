@@ -26,22 +26,22 @@ void initialize_sources(
     int source_regions, 
     int fine_axial_intervals, 
     int egroups,
-    float (**fine_flux_arr)[fine_axial_intervals][egroups],
-    float (**fine_source_arr)[fine_axial_intervals][egroups],
-    float (**sigT_arr)[egroups]
+    float (* restrict *fine_flux_arr)[fine_axial_intervals][egroups],
+    float (* restrict * fine_source_arr)[fine_axial_intervals][egroups],
+    float (* restrict * sigT_arr)[egroups]
     )
 {
 
 	// Allocate Fine Source Data
-  *fine_source_arr = (float (*)[fine_axial_intervals][egroups])
+  *fine_source_arr = (float (* restrict)[fine_axial_intervals][egroups])
     malloc( source_regions * fine_axial_intervals * egroups * sizeof(float));
 
 	// Allocate Fine Flux Data
-  *fine_flux_arr = (float (*)[fine_axial_intervals][egroups]) 
+  *fine_flux_arr = (float (* restrict)[fine_axial_intervals][egroups]) 
     malloc( source_regions * fine_axial_intervals * egroups * sizeof(float));
 
 	// Allocate SigT
-  *sigT_arr = (float (*)[egroups]) 
+  *sigT_arr = (float (* restrict)[egroups]) 
     malloc( source_regions * egroups * sizeof(float));
 
 	// Initialize fine source and flux to random numbers
@@ -64,10 +64,10 @@ void initialize_sources(
 void initialize_state_flux( 
     int n_state_fluxes, 
     int egroups, 
-    float (**state_flux_arr)[egroups] 
+    float (* restrict * state_flux_arr)[egroups] 
     )
 {
-  *state_flux_arr = (float (*)[egroups]) 
+  *state_flux_arr = (float (* restrict)[egroups]) 
     malloc(n_state_fluxes * egroups * sizeof(float));
 
   for (int i = 0; i < n_state_fluxes; i++)
@@ -76,9 +76,11 @@ void initialize_state_flux(
 }
 
 
-void initialize_randIdx( int segments, unsigned (**randIdx)[3] )
+void initialize_randIdx( 
+    int segments, 
+    unsigned (* restrict * randIdx)[3] )
 {
-  *randIdx = (unsigned (*)[3]) 
+  *randIdx = (unsigned (* restrict)[3]) 
     malloc(segments * 3 * sizeof(unsigned));
 
   for (int i = 0; i < segments; i++)

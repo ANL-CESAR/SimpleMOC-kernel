@@ -4,12 +4,12 @@
 
 COMPILER    = pgi
 OPENMP      = no
-OPTIMIZE    = no
-DEBUG       = yes
+OPTIMIZE    = yes
+DEBUG       = no
 PROFILE     = no
 PAPI        = no
 MIC         = no
-ACC         = no
+ACC         = yes
 
 #===============================================================================
 # Program name & source code list
@@ -116,7 +116,8 @@ ifeq ($(COMPILER),pgi)
   CFLAGS = -c99 -Minform=warn
 
   ifeq ($(OPTIMIZE),yes)
-    CFLAGS += -fast
+    CFLAGS += -O
+		#CFLAGS += -O2 causes kernel errors with OpenACC
   endif
 
   ifeq ($(VEC_INFO),yes)
@@ -124,7 +125,7 @@ ifeq ($(COMPILER),pgi)
   endif
 	# OpenACC (assumes NVIDA GPU)
   ifeq ($(ACC),yes)
-    CFLAGS += -acc -Minfo=accel -ta=tesla:ptxinfo -DACC
+    CFLAGS += -acc -Minfo=accel -ta=tesla:ptxinfo
   endif
 
   ifeq ($(DEBUG),yes)
