@@ -85,7 +85,7 @@ occaKernel void run_kernel(
     // int outerId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment in CUDA
 
     // Randomized variables (common accross all thread within block)
-    shared int randIdx[3 * batchDim];
+    shared unsigned int randIdx[3 * batchDim];
 
     for(int innerId = 0; innerId < innerDim; ++innerId; inner0){
       for(int randPos = innerId; randPos < batchDim; randPos += innerDim){
