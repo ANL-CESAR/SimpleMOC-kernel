@@ -9,6 +9,7 @@ DEBUG       = no
 PROFILE     = no
 PAPI        = no
 MIC         = no
+TABLE       = no
 
 #===============================================================================
 # Program name & source code list
@@ -109,6 +110,10 @@ endif
    	CFLAGS += -DOPENMP
 endif
 
+# Exponential Table Build
+ifeq ($(TABLE), yes)
+	CFLAGS += -DTABLE
+endif
 
 #===============================================================================
 # Targets to Build

@@ -5,8 +5,10 @@ Input * set_default_input( void )
 {
 	Input * I = (Input *) malloc(sizeof(Input));
 
-	I->source_regions = 2250;
+	I->source_2D_regions = 5000;
+	I->coarse_axial_intervals = 27;
 	I->fine_axial_intervals = 5;
+	I->decomp_assemblies_ax = 20; // Number of subdomains per assembly axially
 	I->segments = 50000000;
 	I->egroups = 128;
 
@@ -23,40 +25,43 @@ Input * set_default_input( void )
 
 Source * initialize_sources( Input * I )
 {
-	size_t nbytes = 0;
+	I->nbytes = 0;
 
 	// Source Data Structure Allocation
-	Source * sources = (Source *) malloc( I->source_regions * sizeof(Source));
-	nbytes += I->source_regions * sizeof(Source);
+	Source * sources = (Source *) malloc( I->source_3D_regions * sizeof(Source));
+	I->nbytes += I->source_3D_regions * sizeof(Source);
 
 	// Allocate Fine Source Data
 	float * data = (float *) malloc(
-			I->source_regions * I->fine_axial_intervals *
+			I->source_3D_regions * I->fine_axial_intervals *
 			I->egroups * sizeof(float));
-	for( int i = 0; i < I->source_regions; i++ )
+	I->nbytes += I->source_3D_regions * I->fine_axial_intervals * I->egroups * sizeof(float);
+	for( int i = 0; i < I->source_3D_regions; i++ )
 		sources[i].fine_source = &data[i*I->fine_axial_intervals*I->egroups];
 
 	// Allocate Fine Flux Data
 	data = (float *) malloc(
-			I->source_regions * I->fine_axial_intervals *
+			I->source_3D_regions * I->fine_axial_intervals *
 			I->egroups * sizeof(float));
-	for( int i = 0; i < I->source_regions; i++ )
+	I->nbytes += I->source_3D_regions * I->fine_axial_intervals * I->egroups * sizeof(float);
+	for( int i = 0; i < I->source_3D_regions; i++ )
 		sources[i].fine_flux = &data[i*I->fine_axial_intervals*I->egroups];
 
 	// Allocate SigT
-	data = (float *) malloc( I->source_regions * I->egroups * sizeof(float));
-	for( int i = 0; i < I->source_regions; i++ )
+	data = (float *) malloc( I->source_3D_regions * I->egroups * sizeof(float));
+	I->nbytes += I->source_3D_regions * I->egroups * sizeof(float);
+	for( int i = 0; i < I->source_3D_regions; i++ )
 		sources[i].sigT = &data[i * I->egroups];
 
 	// Allocate Locks
 	#ifdef OPENMP
 	omp_lock_t * locks = init_locks(I);
-	for( int i = 0; i < I->source_regions; i++)
+	for( int i = 0; i < I->source_3D_regions; i++)
 		sources[i].locks = &locks[i * I->fine_axial_intervals];
 	#endif
 
 	// Initialize fine source and flux to random numbers
-	for( int i = 0; i < I->source_regions; i++ )
+	for( int i = 0; i < I->source_3D_regions; i++ )
 		for( int j = 0; j < I->fine_axial_intervals; j++ )
 			for( int k = 0; k < I->egroups; k++ )
 			{
@@ -65,7 +70,7 @@ Source * initialize_sources( Input * I )
 			}
 
 	// Initialize SigT Values
-	for( int i = 0; i < I->source_regions; i++ )
+	for( int i = 0; i < I->source_3D_regions; i++ )
 		for( int j = 0; j < I->egroups; j++ )
 			sources[i].sigT[j] = rand() / RAND_MAX;
 
@@ -73,10 +78,11 @@ Source * initialize_sources( Input * I )
 }
 
 // Builds a table of exponential values for linear interpolation
-Table * buildExponentialTable( float precision, float maxVal )
+Table * buildExponentialTable( float precision, float maxVal, Input * I )
 {
 	// define table
 	Table * table = (Table *) malloc(sizeof(Table));
+	I->nbytes += sizeof(Table);
 
 	// compute number of arry values
 	int N = (int) ( maxVal * sqrt(1.0 / ( 8.0 * precision * 0.01 ) ) );
@@ -90,6 +96,7 @@ Table * buildExponentialTable( float precision, float maxVal )
 	#else
 	float * tableVals = malloc( (2 * N ) * sizeof(float) );
 	#endif
+	I->nbytes += 2*N*sizeof(float);
 
 	// store linear segment information (slope and y-intercept)
 	for( int n = 0; n < N; n++ )
@@ -171,8 +178,9 @@ SIMD_Vectors allocate_simd_vectors(Input * I)
 omp_lock_t * init_locks( Input * I )
 {
 	// Allocate locks array
-	long n_locks = I->source_regions * I->fine_axial_intervals; 
+	long n_locks = I->source_3D_regions * I->fine_axial_intervals; 
 	omp_lock_t * locks = (omp_lock_t *) malloc( n_locks* sizeof(omp_lock_t));
+	I->nbytes += n_locks * sizeof(omp_lock_t);
 
 	// Initialize locks array
 	for( long i = 0; i < n_locks; i++ )

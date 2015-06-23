@@ -79,12 +79,22 @@ void print_input_summary(Input I)
 {
 	center_print("INPUT SUMMARY", 79);
 	border_print();
+
 	printf("%-25s%d\n", "Energy Groups:", I.egroups);
-	printf("%-25s%d\n", "Source Regions:", I.source_regions);
+	printf("%-25s%d\n", "2D Source Regions:", I.source_2D_regions);
+	printf("%-25s%d\n", "Coarse Axial Intervals:", I.coarse_axial_intervals);
 	printf("%-25s%d\n", "Fine Axial Intervals:", I.fine_axial_intervals);
+	printf("%-25s%d\n", "Axial Decomposition:", I.decomp_assemblies_ax);
+	printf("%-25s%d\n", "3D Source Regions:", I.source_3D_regions);
 	printf("%-25s", "Segments:"); fancy_int(I.segments);
 	printf("%-25s", "Random Number Streams:"); fancy_int(I.streams);
+	printf("%-25s%.2f\n", "Memory Estimate (MB):", mem_estimate(I));
 	printf("%-25s%d\n", "Segments per CUDA block:", I.seg_per_thread);
+	#ifdef TABLE
+	printf("%-25s%s\n", "Exponential Table:","ON");
+	#else
+	printf("%-25s%s\n", "Exponential Table:","OFF");
+	#endif
 	border_print();
 }
 

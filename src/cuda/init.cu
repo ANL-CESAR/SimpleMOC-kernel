@@ -31,8 +31,10 @@ Input set_default_input( void )
 {
 	Input I;
 
-	I.source_regions = 2250;
+	I.source_2D_regions = 5000;
+	I.coarse_axial_intervals = 27;
 	I.fine_axial_intervals = 5;
+	I.decomp_assemblies_ax = 20; // Number of subdomains per assembly axially
 	I.segments = 50000000;
 	I.egroups = 128;
 	I.streams = 10000;
@@ -47,17 +49,17 @@ double mem_estimate( Input I )
 	size_t nbytes = 0;
 
 	// Sources Array
-	nbytes += I.source_regions * sizeof(Source);
+	nbytes += I.source_3D_regions * sizeof(Source);
 
 	// Fine Source Data
-	long N_fine = I.source_regions * I.fine_axial_intervals * I.egroups;
+	long N_fine = I.source_3D_regions * I.fine_axial_intervals * I.egroups;
 	nbytes += N_fine * sizeof(float);
 
 	// Fine Flux Data
 	nbytes += N_fine * sizeof(float);
 
 	// SigT Data
-	long N_sigT = I.source_regions * I.egroups;
+	long N_sigT = I.source_3D_regions * I.egroups;
 	nbytes += N_sigT * sizeof(float);
 
 	// Return MB
@@ -67,23 +69,23 @@ double mem_estimate( Input I )
 Source * initialize_sources( Input I, Source_Arrays * SA )
 {
 	// Source Data Structure Allocation
-	Source * sources = (Source *) malloc( I.source_regions * sizeof(Source));
+	Source * sources = (Source *) malloc( I.source_3D_regions * sizeof(Source));
 
 	// Allocate Fine Source Data
-	long N_fine = I.source_regions * I.fine_axial_intervals * I.egroups;
+	long N_fine = I.source_3D_regions * I.fine_axial_intervals * I.egroups;
 	SA->fine_source_arr = (float *) malloc( N_fine * sizeof(float));
-	for( int i = 0; i < I.source_regions; i++ )
+	for( int i = 0; i < I.source_3D_regions; i++ )
 		sources[i].fine_source_id = i*I.fine_axial_intervals*I.egroups;
 
 	// Allocate Fine Flux Data
 	SA->fine_flux_arr = (float *) malloc( N_fine * sizeof(float));
-	for( int i = 0; i < I.source_regions; i++ )
+	for( int i = 0; i < I.source_3D_regions; i++ )
 		sources[i].fine_flux_id = i*I.fine_axial_intervals*I.egroups;
 
 	// Allocate SigT Data
-	long N_sigT = I.source_regions * I.egroups;
+	long N_sigT = I.source_3D_regions * I.egroups;
 	SA->sigT_arr = (float *) malloc( N_sigT * sizeof(float));
-	for( int i = 0; i < I.source_regions; i++ )
+	for( int i = 0; i < I.source_3D_regions; i++ )
 		sources[i].sigT_id = i * I.egroups;
 
 	// Initialize fine source and flux to random numbers
@@ -103,7 +105,7 @@ Source * initialize_sources( Input I, Source_Arrays * SA )
 Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays * SA_d, Source * sources_h )
 {
 	// Allocate & Copy Fine Source Data
-	long N_fine = I.source_regions * I.fine_axial_intervals * I.egroups;
+	long N_fine = I.source_3D_regions * I.fine_axial_intervals * I.egroups;
 	cudaMalloc((void **) &SA_d->fine_source_arr, N_fine * sizeof(float));
 	cudaMemcpy(SA_d->fine_source_arr, SA_h->fine_source_arr, N_fine * sizeof(float), cudaMemcpyHostToDevice);
 
@@ -112,14 +114,14 @@ Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays
 	cudaMemcpy(SA_d->fine_flux_arr, SA_h->fine_flux_arr, N_fine * sizeof(float), cudaMemcpyHostToDevice);
 
 	// Allocate & Copy SigT Data
-	long N_sigT = I.source_regions * I.egroups;
+	long N_sigT = I.source_3D_regions * I.egroups;
 	cudaMalloc((void **) &SA_d->sigT_arr, N_sigT * sizeof(float));
 	cudaMemcpy(SA_d->sigT_arr, SA_h->sigT_arr, N_sigT * sizeof(float), cudaMemcpyHostToDevice);
 
 	// Allocate & Copy Source Array Data
 	Source * sources_d;
-	cudaMalloc((void **) &sources_d, I.source_regions * sizeof(Source));
-	cudaMemcpy(sources_d, sources_h, I.source_regions * sizeof(Source), cudaMemcpyHostToDevice);
+	cudaMalloc((void **) &sources_d, I.source_3D_regions * sizeof(Source));
+	cudaMemcpy(sources_d, sources_h, I.source_3D_regions * sizeof(Source), cudaMemcpyHostToDevice);
 
 	return sources_d;
 }

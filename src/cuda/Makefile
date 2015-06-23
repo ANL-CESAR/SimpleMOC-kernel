@@ -6,6 +6,7 @@ COMPILER    = nvcc
 OPTIMIZE    = yes
 DEBUG       = no
 PROFILE     = no
+TABLE       = no
 
 #===============================================================================
 # Program name & source code list
@@ -49,6 +50,11 @@ endif
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
 	CFLAGS += -O3 --use_fast_math
+endif
+
+# Exponential Table Build
+ifeq ($(TABLE), yes)
+	CFLAGS += -DTABLE
 endif
 
 #===============================================================================

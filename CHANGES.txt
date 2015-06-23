@@ -1,4 +1,31 @@
 ===============================================================================
+NEW IN VERSION 3
+===============================================================================
+
+- Altered some of the defaults and added new variables. Applies to both 
+  cpu/Phi and GPU versions. This change increases the data structure size
+  by about 35% to 36 MB total. 
+
+- Now user variables are: 2D source regions, coarse axial intervals,
+  fine axial intervals, and the axial deomposition
+
+- 2D source regions: (5000 default) representative of the number of 2D source
+  regions that would be present on a single node out of ~5000 nodes running a
+  full reactor problem
+
+- coarse axial intervals: (27 default) Number of coarse axial intervals
+  for a full assembly in the reactor (i.e., not yet domain decomposed)
+
+- fine axial intervals: (5 default) number of intervals per coarse
+  axial interval
+
+- Axial Decomposition: (20 default) number of nodes that will be used
+  to handle a single assembly
+
+- These variables are then used to calculated the number of 3D source regions,
+  as 2D_sources * coarse axial intervals / axial decomposition
+
+===============================================================================
 NEW IN VERSION 2
 ===============================================================================
 - CUDA code has been optimized significantly.

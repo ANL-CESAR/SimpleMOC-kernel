@@ -54,7 +54,7 @@ __global__ void run_kernel( Input I, Source *  S,
 		for( int i = 0; i < I.seg_per_thread; i++ )
 		{
 			state_flux_id[i] = curand(localState) % N_state_fluxes;
-			QSR_id[i] = curand(localState) % I.source_regions;
+			QSR_id[i] = curand(localState) % I.source_3D_regions;
 			FAI_id[i] = curand(localState) % I.fine_axial_intervals;
 		}
 	}
@@ -155,8 +155,11 @@ __global__ void run_kernel( Input I, Source *  S,
 		tau = sigT * ds;
 		sigT2 = sigT * sigT;
 
-		//interpolateTable( table, tau, &expVal );  
-		expVal = 1.f - exp( -tau); // EXP function is fater than table lookup
+		#ifdef TABLE
+		interpolateTable( table, tau, &expVal );  
+		#else
+		expVal = 1.f - expf( -tau); // EXP function is fater than table lookup
+		#endif
 
 		// Flux Integral
 

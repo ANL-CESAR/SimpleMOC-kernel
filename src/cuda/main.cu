@@ -2,12 +2,16 @@
 
 int main( int argc, char * argv[] )
 {
-	int version = 2;
+	int version = 3;
 
 	srand(time(NULL));
 
 	Input I = set_default_input();
 	read_CLI( argc, argv, &I );
+	
+	// Calculate Number of 3D Source Regions
+	I.source_3D_regions = (int) ceil((double)I.source_2D_regions *
+		I.coarse_axial_intervals / I.decomp_assemblies_ax);
 
 	logo(version);
 
@@ -24,11 +28,13 @@ int main( int argc, char * argv[] )
 	cudaDeviceSynchronize();
 	
 	// Build Exponential Table
+	Table * table_d = NULL;
+	#ifdef TABLE
 	printf("Building Exponential Table...\n");
 	Table table = buildExponentialTable();
-	Table * table_d;
 	CUDA_CALL( cudaMalloc((void **) &table_d, sizeof(Table)) );
 	CUDA_CALL( cudaMemcpy(table_d, &table, sizeof(Table), cudaMemcpyHostToDevice) );
+	#endif
 
 	// Setup CUDA blocks / threads
 	int n_blocks = sqrt(I.segments);

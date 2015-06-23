@@ -44,7 +44,7 @@ void run_kernel( Input * I, Source * S, Table * table)
 		for( long i = 0; i < I->segments; i++ )
 		{
 			// Pick Random QSR
-			int QSR_id = rand_r(&seed) % I->source_regions;
+			int QSR_id = rand_r(&seed) % I->source_3D_regions;
 
 			// Pick Random Fine Axial Interval
 			int FAI_id = rand_r(&seed) % I->fine_axial_intervals;
@@ -215,8 +215,11 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#endif
 	for( int g = 0; g < egroups; g++)
 	{
-		//expVal[g] = interpolateTable( table, tau[g] );  
+		#ifdef TABLE
+		expVal[g] = interpolateTable( table, tau[g] );  
+		#else
 		expVal[g] = 1.f - expf( -tau[g] ); // exp is faster on many architectures
+		#endif
 	}
 
 	// Flux Integral

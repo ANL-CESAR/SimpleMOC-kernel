@@ -27,13 +27,17 @@
 
 // User inputs
 typedef struct{
-	int source_regions;
+	int source_2D_regions;
+	int source_3D_regions;
+	int coarse_axial_intervals;
 	int fine_axial_intervals;
+	int decomp_assemblies_ax; // Number of subdomains per assembly axially
 	long segments;
 	int egroups;
 	int nthreads;
 	int streams;
 	int seg_per_thread;
+	size_t nbytes;
 } Input;
 
 // Source Region Structure

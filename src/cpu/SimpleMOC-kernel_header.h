@@ -23,11 +23,15 @@
 
 // User inputs
 typedef struct{
-	int source_regions;
+	int source_2D_regions;
+	int source_3D_regions;
+	int coarse_axial_intervals;
 	int fine_axial_intervals;
+	int decomp_assemblies_ax; // Number of subdomains per assembly axially
 	long segments;
 	int egroups;
 	int nthreads;
+	size_t nbytes;
 
     #ifdef PAPI
 	int papi_event_set;
@@ -84,7 +88,7 @@ float interpolateTable( Table * table, float x);
 // init.c
 Source * aligned_initialize_sources( Input * I );
 Source * initialize_sources( Input * I );
-Table * buildExponentialTable( float precision, float maxVal );
+Table * buildExponentialTable( float precision, float maxVal, Input * I );
 Input * set_default_input( void );
 SIMD_Vectors aligned_allocate_simd_vectors(Input * I);
 SIMD_Vectors allocate_simd_vectors(Input * I);

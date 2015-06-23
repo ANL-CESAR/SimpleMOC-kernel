@@ -2,7 +2,7 @@
 
 int main( int argc, char * argv[] )
 {
-	int version = 2;
+	int version = 3;
 
 	#ifdef PAPI
 	papi_serial_init();
@@ -10,22 +10,30 @@ int main( int argc, char * argv[] )
 
 	srand(time(NULL));
 
+	// Get Inputs
 	Input * I = set_default_input();
 	read_CLI( argc, argv, I );
+	
+	// Calculate Number of 3D Source Regions
+	I->source_3D_regions = (int) ceil((double)I->source_2D_regions *
+		I->coarse_axial_intervals / I->decomp_assemblies_ax);
 
 	logo(version);
 
 	#ifdef OPENMP
 	omp_set_num_threads(I->nthreads); 
 	#endif
-
-	print_input_summary(I);
-
+	
 	// Build Source Data
 	Source * S = initialize_sources(I); 
 	
 	// Build Exponential Table
-	Table * table = buildExponentialTable( 0.01, 10.0 );
+	Table * table;
+	#ifdef TABLE
+	table = buildExponentialTable( 0.01, 10.0, I );
+	#endif
+	
+	print_input_summary(I);
 
 	center_print("SIMULATION", 79);
 	border_print();

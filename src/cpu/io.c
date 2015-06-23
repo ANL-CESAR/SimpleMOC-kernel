@@ -76,9 +76,18 @@ void print_input_summary(Input * I)
 	printf("%-25s%d\n", "Number of Threads:", I->nthreads);
 	#endif
 	printf("%-25s%d\n", "Energy Groups:", I->egroups);
-	printf("%-25s%d\n", "Source Regions:", I->source_regions);
+	printf("%-25s%d\n", "2D Source Regions:", I->source_2D_regions);
+	printf("%-25s%d\n", "Coarse Axial Intervals:", I->coarse_axial_intervals);
 	printf("%-25s%d\n", "Fine Axial Intervals:", I->fine_axial_intervals);
+	printf("%-25s%d\n", "Axial Decomposition:", I->decomp_assemblies_ax);
+	printf("%-25s%d\n", "3D Source Regions:", I->source_3D_regions);
 	printf("%-25s", "Segments:"); fancy_int(I->segments);
+	printf("%-25s%.2f\n", "Memory Estimate (MB):", I->nbytes/1024.0/1024.0);
+	#ifdef TABLE
+	printf("%-25s%s\n", "Exponential Table:","ON");
+	#else
+	printf("%-25s%s\n", "Exponential Table:","OFF");
+	#endif
 	#ifdef PAPI
     if( I->papi_event_set == -1)
         printf("%-25s%s\n", "PAPI event to count:", I->event_name);
@@ -144,7 +153,6 @@ void read_CLI( int argc, char * argv[], Input * input )
 			print_CLI_error();
 	}
 
-	// Validate Input
 
 	// Validate nthreads
 	if( input->nthreads < 1 )
