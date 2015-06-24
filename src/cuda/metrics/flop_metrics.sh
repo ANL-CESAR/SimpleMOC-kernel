@@ -1,2 +1,3 @@
 #!/bin/sh
-nvprof --devices 0 --metrics flops_sp --metrics ldst_issued --metrics ldst_executed ../SimpleMOC-kernel
+nvprof --metrics flop_sp_efficiency --metrics flop_count_sp ../SimpleMOC-kernel -d 0
+nvprof --metrics flop_sp_efficiency --metrics flop_count_sp ../SimpleMOC-kernel -d 2

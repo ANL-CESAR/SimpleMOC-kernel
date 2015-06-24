@@ -106,13 +106,6 @@ void print_input_summary(Input I)
 // reads command line inputs and applies options
 void read_CLI( int argc, char * argv[], Input * input )
 {
-	// defaults to max threads on the system	
-	#ifdef OPENMP
-	input->nthreads = omp_get_num_procs();
-	#else
-	input->nthreads = 1;
-	#endif
-	
 	// Collect Raw Input
 	for( int i = 1; i < argc; i++ )
 	{
@@ -152,16 +145,20 @@ void read_CLI( int argc, char * argv[], Input * input )
 			else
 				print_CLI_error();
 		}
-
+		// CUDA Device Number (-d)
+		else if( strcmp(arg, "-d") == 0 )
+		{
+			if( ++i < argc )
+			{
+				int device_id = atoi(argv[i]);
+				cudaSetDevice( device_id );
+			}
+			else
+				print_CLI_error();
+		}
 		else
 			print_CLI_error();
 	}
-
-	// Validate Input
-
-	// Validate nthreads
-	if( input->nthreads < 1 )
-		print_CLI_error();
 }
 
 // print error to screen, inform program options
@@ -173,6 +170,7 @@ void print_CLI_error(void)
 	printf("  -s <segments>         Number of segments to process\n");
 	printf("  -e <energy groups>    Number of energy groups\n");
 	printf("  -p <segs per thread>  Number of segments per CUDA Block\n");
+	printf("  -d <CUDA device ID>   CUDA GPU device ID number\n");
 	printf("See readme for full description of default run values\n");
 	exit(1);
 }
