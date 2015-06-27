@@ -175,13 +175,3 @@ void print_CLI_error(void)
 	exit(1);
 }
 
-__device__ unsigned int hash(char *str, int nbins)
-{
-	unsigned int hash = 5381;
-	int c;
-
-	while (c = *str++)
-		hash = ((hash << 5) + hash) + c;
-
-	return hash % nbins;
-}

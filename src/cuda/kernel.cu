@@ -73,7 +73,6 @@ __global__ void run_kernel( Input I, Source *  S,
 
 	#ifdef VERIFY
 	unsigned long long thread_local_hash = 0;
-	char line[64];
 	#endif
 
 	for( int i = 0; i < I.seg_per_thread; i++ )
@@ -211,16 +210,25 @@ __global__ void run_kernel( Input I, Source *  S,
 		state_flux[g] = t1 + t2 + t3 + t4;
 
 		#ifdef VERIFY
-		sprintf(line, "%.5lf", state_flux[g]);
-		thread_local_hash += hash(line, 10000);
+		thread_local_hash += hash(state_flux[g]);
 		#endif
 	}
 	
 	#ifdef VERIFY
 	__syncthreads();
-	unsigned long long block_hash = 0;
-	atomicAdd(&block_hash, thread_local_hash);
+	__shared__ unsigned long long block_hash;
+	if( threadIdx.x == 0 )
+		block_hash = 0;
+	for( int i = 0; i < I.egroups; i++ )
+	{
+		if( threadIdx.x == i )
+		{
+			block_hash += thread_local_hash;
+		}
+		__syncthreads();
+	}
 	__syncthreads();
+	//atomicAdd(&block_hash, (unsigned long long ) thread_local_hash);
 	if( threadIdx.x == 0 ) // Specifies only done once per CUDA block
 	{
 		atomicAdd(vhash, block_hash);
@@ -244,4 +252,11 @@ __device__ void interpolateTable(Table *  table, float x, float *  out)
 		float val = slope * x + intercept;
 		*out = val;
 	}
+}
+
+__device__ unsigned int hash( float f )
+{
+	unsigned int ui;
+	memcpy( &ui, &f, sizeof( float ) );
+	return ui & 0xfffff000;
 }

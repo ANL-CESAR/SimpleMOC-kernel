@@ -87,6 +87,6 @@ void fancy_int( int a );
 void print_input_summary(Input input);
 void read_CLI( int argc, char * argv[], Input * input );
 void print_CLI_error(void);
-__device__ unsigned int hash(char *str, int nbins);
+__device__ unsigned int hash( float f );
 
 #endif
