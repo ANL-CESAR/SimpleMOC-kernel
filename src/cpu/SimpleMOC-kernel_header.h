@@ -24,6 +24,10 @@
 #include<papi.h>
 #endif
 
+#ifdef VERIFY
+#define float double
+#endif
+
 // User inputs
 typedef struct{
 	int source_2D_regions;
