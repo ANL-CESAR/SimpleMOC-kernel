@@ -2,7 +2,7 @@
 
 int main( int argc, char * argv[] )
 {
-	int version = 3;
+	int version = 4;
 
 	#ifdef PAPI
 	papi_serial_init();

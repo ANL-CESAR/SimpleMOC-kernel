@@ -27,7 +27,7 @@ void run_kernel( Input * I, Source * S, Table * table)
 
 		// Allocate Thread Local Flux Vector
 		for( int i = 0; i < I->egroups; i++ )
-			state_flux[i] = rand_r(&seed) / RAND_MAX;
+			state_flux[i] = (float) rand_r(&seed) / RAND_MAX;
 
 		// Initialize PAPI Counters (if enabled)
 		#ifdef PAPI

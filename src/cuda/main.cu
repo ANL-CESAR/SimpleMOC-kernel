@@ -2,7 +2,7 @@
 
 int main( int argc, char * argv[] )
 {
-	int version = 3;
+	int version = 4;
 
 	srand(time(NULL));
 
