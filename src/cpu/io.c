@@ -180,7 +180,8 @@ unsigned int hash(unsigned char *str, int nbins)
 	while (c = *str++)
 		hash = ((hash << 5) + hash) + c;
 
-	return hash % nbins;
+	//return hash % nbins;
+	return 1;
 }
 
 unsigned int portable_hash( float f )

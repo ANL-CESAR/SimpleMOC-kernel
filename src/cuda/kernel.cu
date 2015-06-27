@@ -259,5 +259,6 @@ __device__ unsigned int hash( float f )
 	unsigned int ui;
 	memcpy( &ui, &rounded_up, sizeof( float ) );
 	//return ui & 0xfffff000;
-	return ui;
+	//return ui;
+	return 1;
 }
