@@ -82,8 +82,7 @@ __global__ void run_kernel( Input I, Source *  S,
 		float *  state_flux = &state_fluxes[state_flux_id[i]];
 
 		#ifdef VERIFY
-		for( int j = 0; j < I.egroups; j++ )
-			state_flux[j] = 1.0;
+		state_flux[g] = 1.0;
 		#endif
 
 		__syncthreads();
@@ -256,7 +255,9 @@ __device__ void interpolateTable(Table *  table, float x, float *  out)
 
 __device__ unsigned int hash( float f )
 {
+	float rounded_up = ceilf(f * 10000.) / 10000.; 
 	unsigned int ui;
-	memcpy( &ui, &f, sizeof( float ) );
-	return ui & 0xfffff000;
+	memcpy( &ui, &rounded_up, sizeof( float ) );
+	//return ui & 0xfffff000;
+	return ui;
 }
