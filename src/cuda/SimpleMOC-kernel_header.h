@@ -65,7 +65,8 @@ typedef struct{
 // kernel.c
 __global__ void run_kernel( Input I, Source *  S,
 		Source_Arrays SA, Table *  table, curandState *  state,
-		float *  state_fluxes, int N_state_fluxes);
+		float *  state_fluxes, int N_state_fluxes,
+		unsigned long long * vhash);
 __device__ void interpolateTable(Table *  table, float x, float *  out);
 
 // init.c
@@ -86,5 +87,6 @@ void fancy_int( int a );
 void print_input_summary(Input input);
 void read_CLI( int argc, char * argv[], Input * input );
 void print_CLI_error(void);
+__device__ unsigned int hash(char *str, int nbins);
 
 #endif

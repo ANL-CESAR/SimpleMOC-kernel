@@ -11,7 +11,8 @@
 
 __global__ void run_kernel( Input I, Source *  S,
 		Source_Arrays SA, Table *  table, curandState *  state,
-		float *  state_fluxes, int N_state_fluxes)
+		float *  state_fluxes, int N_state_fluxes,
+		unsigned long long * vhash)
 {
 	int blockId = blockIdx.y * gridDim.x + blockIdx.x; // geometric segment	
 
@@ -21,6 +22,8 @@ __global__ void run_kernel( Input I, Source *  S,
 	// Assign RNG state
 	curandState *  localState = &state[blockId % I.streams];
 
+	// Assign multiple segments to each block rather than 1:1
+	// This makes things significantly faster as blocks have more work
 	blockId *= I.seg_per_thread;
 	blockId--;
 
@@ -49,17 +52,29 @@ __global__ void run_kernel( Input I, Source *  S,
 	int *  QSR_id = &shm[I.seg_per_thread];
 	int *  FAI_id = &shm[I.seg_per_thread * 2];
 
-	if( threadIdx.x == 0 )
+	if( threadIdx.x == 0 ) // Specifies only done once per CUDA block
 	{
-		for( int i = 0; i < I.seg_per_thread; i++ )
+		for( int i = 0; i < I.seg_per_thread; i++ ) // loops through segments for block
 		{
+			#ifdef VERIFY
+			// Sets randomized ID's deterministically based on segment ID
+			state_flux_id[i] = curand(localState) % N_state_fluxes;
+			QSR_id[i] = ( blockId + 1 + i ) % I.source_3D_regions;
+			FAI_id[i] = ( blockId + 1 + i ) % I.fine_axial_intervals;
+			#else
 			state_flux_id[i] = curand(localState) % N_state_fluxes;
 			QSR_id[i] = curand(localState) % I.source_3D_regions;
 			FAI_id[i] = curand(localState) % I.fine_axial_intervals;
+			#endif
 		}
 	}
 
 	__syncthreads();
+
+	#ifdef VERIFY
+	unsigned long long thread_local_hash = 0;
+	char line[64];
+	#endif
 
 	for( int i = 0; i < I.seg_per_thread; i++ )
 	{
@@ -67,6 +82,10 @@ __global__ void run_kernel( Input I, Source *  S,
 
 		float *  state_flux = &state_fluxes[state_flux_id[i]];
 
+		#ifdef VERIFY
+		for( int j = 0; j < I.egroups; j++ )
+			state_flux[j] = 1.0;
+		#endif
 
 		__syncthreads();
 
@@ -191,7 +210,22 @@ __global__ void run_kernel( Input I, Source *  S,
 		// Total psi
 		state_flux[g] = t1 + t2 + t3 + t4;
 
+		#ifdef VERIFY
+		sprintf(line, "%.5lf", state_flux[g]);
+		thread_local_hash += hash(line, 10000);
+		#endif
 	}
+	
+	#ifdef VERIFY
+	__syncthreads();
+	unsigned long long block_hash = 0;
+	atomicAdd(&block_hash, thread_local_hash);
+	__syncthreads();
+	if( threadIdx.x == 0 ) // Specifies only done once per CUDA block
+	{
+		atomicAdd(vhash, block_hash);
+	}
+	#endif
 }	
 
 /* Interpolates a formed exponential table to compute ( 1- exp(-x) )

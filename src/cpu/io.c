@@ -182,3 +182,10 @@ unsigned int hash(unsigned char *str, int nbins)
 
 	return hash % nbins;
 }
+
+unsigned int portable_hash( float f )
+{
+	unsigned int ui;
+	memcpy( &ui, &f, sizeof( float ) );
+	return ui & 0xfffff000;
+}

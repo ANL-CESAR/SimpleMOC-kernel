@@ -61,7 +61,7 @@ unsigned long long run_kernel( Input * I, Source * S, Table * table)
 			// on segment ID
 			#ifdef VERIFY
 			QSR_id = i % I->source_3D_regions;
-			FAI_id = (i+1) % I->fine_axial_intervals;
+			FAI_id = i % I->fine_axial_intervals;
 			#endif
 
 			// Attenuate Segment
@@ -74,9 +74,12 @@ unsigned long long run_kernel( Input * I, Source * S, Table * table)
 			unsigned long long local_hash = 0;
 			for( int j = 0; j < I->egroups; j++ )
 			{
+				/*
 				char line[256];
 				sprintf(line, "%.5lf", state_flux[j]);
 				local_hash += hash(line, 10000);
+				*/
+				local_hash += portable_hash(state_flux[j]);
 				state_flux[j] = 1.0;
 			}
 			#pragma omp atomic

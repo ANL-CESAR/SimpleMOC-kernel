@@ -107,6 +107,7 @@ void read_CLI( int argc, char * argv[], Input * input );
 void print_CLI_error(void);
 void read_input_file( Input * I, char * fname);
 unsigned int hash(unsigned char *str, int nbins);
+unsigned int portable_hash( float f );
 
 // papi.c
 void papi_serial_init(void);

@@ -7,6 +7,7 @@ OPTIMIZE    = yes
 DEBUG       = no
 PROFILE     = no
 TABLE       = no
+VERIFY      = yes
 
 #===============================================================================
 # Program name & source code list
@@ -55,6 +56,11 @@ endif
 # Exponential Table Build
 ifeq ($(TABLE), yes)
 	CFLAGS += -DTABLE
+endif
+
+# Verification Hash Checking Mode
+ifeq ($(VERIFY), yes)
+	CFLAGS += -DVERIFY
 endif
 
 #===============================================================================

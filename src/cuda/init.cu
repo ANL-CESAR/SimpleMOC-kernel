@@ -91,13 +91,13 @@ Source * initialize_sources( Input I, Source_Arrays * SA )
 	// Initialize fine source and flux to random numbers
 	for( long i = 0; i < N_fine; i++ )
 	{
-		SA->fine_source_arr[i] = rand() / RAND_MAX;
-		SA->fine_flux_arr[i] = rand() / RAND_MAX;
+		SA->fine_source_arr[i] = (float) rand() / RAND_MAX;
+		SA->fine_flux_arr[i] = (float) rand() / RAND_MAX;
 	}
 
 	// Initialize SigT Values
 	for( int i = 0; i < N_sigT; i++ )
-		SA->sigT_arr[i] = rand() / RAND_MAX;
+		SA->sigT_arr[i] = (float) rand() / RAND_MAX;
 
 	return sources;
 }

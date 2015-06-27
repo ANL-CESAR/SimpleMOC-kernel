@@ -62,7 +62,7 @@ int main( int argc, char * argv[] )
 	printf("%-25s%.3lf seconds\n", "Runtime:", stop-start);
 	printf("%-25s%.3lf ns\n", "Time per Intersection:", tpi);
 	#ifdef VERIFY
-	printf("%-25s%llu\n", "Verification Hash:", vhash);
+	printf("%-25s%llu\n", "Verification Hash:", vhash % 10000);
 	#endif
 	border_print();
 

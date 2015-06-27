@@ -4,7 +4,11 @@ int main( int argc, char * argv[] )
 {
 	int version = 3;
 
+	#ifdef VERIFY
+	srand(1);
+	#else
 	srand(time(NULL));
+	#endif
 
 	Input I = set_default_input();
 	read_CLI( argc, argv, &I );
@@ -85,10 +89,18 @@ int main( int argc, char * argv[] )
 		blocks_k.y++;
 	assert( blocks_k.x * blocks_k.y >= I.segments / I.seg_per_thread );
 
+	// Verification hash
+	unsigned long long * vhash_d; 
+	#ifdef VERIFY
+	unsigned long long vhash = 0;
+	CUDA_CALL( cudaMalloc((void **) &vhash_d, sizeof(unsigned long long) ));
+	CUDA_CALL( cudaMemcpy(vhash_d, &vhash, sizeof(unsigned long long), cudaMemcpyHostToDevice) );
+	#endif
+
 	// Run Simulation Kernel Loop
 	cudaEventRecord(start, 0);
 	run_kernel <<< blocks_k, I.egroups, I.seg_per_thread * 3 *sizeof(int) >>> (I, sources_d, SA_d, table_d, 
-			RNG_states, flux_states, N_flux_states);
+			RNG_states, flux_states, N_flux_states, vhash_d);
 	CudaCheckError();
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(start);
@@ -98,6 +110,10 @@ int main( int argc, char * argv[] )
 
 	float * host_flux_states = (float*) malloc(N_flux_states * I.egroups * sizeof(float));
 	CUDA_CALL( cudaMemcpy( host_flux_states, flux_states, N_flux_states * I.egroups * sizeof(float), cudaMemcpyDeviceToHost));
+	
+	#ifdef VERIFY
+	CUDA_CALL( cudaMemcpy(&vhash, vhash_d, sizeof(unsigned long long), cudaMemcpyDeviceToHost) );
+	#endif
 
 	printf("Simulation Complete.\n");
 
@@ -109,6 +125,9 @@ int main( int argc, char * argv[] )
 			(double)I.segments / (double) I.egroups) * 1.0e9;
 	printf("%-25s%.3f seconds\n", "Runtime:", time / 1000.0);
 	printf("%-25s%.3lf ns\n", "Time per Intersection:", tpi);
+	#ifdef VERIFY
+	printf("%-25s%llu\n", "Verification Hash:", vhash);
+	#endif
 	border_print();
 
 	return 0;
