@@ -185,7 +185,7 @@ unsigned int hash(unsigned char *str, int nbins)
 
 unsigned int portable_hash( float f )
 {
-	float rounded_up = ceilf(f * 10000.) / 10000.; 
+	float rounded_up = ceilf(f * 10.) / 10.; 
 	unsigned int ui;
 	memcpy( &ui, &rounded_up, sizeof( float ) );
 	//return ui & 0xfffff000;

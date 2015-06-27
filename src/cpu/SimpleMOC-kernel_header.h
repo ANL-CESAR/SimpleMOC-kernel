@@ -11,7 +11,10 @@
 #include<assert.h>
 #include<pthread.h>
 #include<unistd.h>
+
+#ifdef INTEL
 #include<malloc.h>
+#endif
 
 #ifdef OPENMP
 #include<omp.h>
