@@ -65,14 +65,14 @@ Source * initialize_sources( Input * I )
 		for( int j = 0; j < I->fine_axial_intervals; j++ )
 			for( int k = 0; k < I->egroups; k++ )
 			{
-				sources[i].fine_source[j * I->egroups + k] = rand() / RAND_MAX;
-				sources[i].fine_flux[j * I->egroups + k] = rand() / RAND_MAX;
+				sources[i].fine_source[j * I->egroups + k] = (float) rand() / RAND_MAX;
+				sources[i].fine_flux[j * I->egroups + k] = (float) rand() / RAND_MAX;
 			}
 
 	// Initialize SigT Values
 	for( int i = 0; i < I->source_3D_regions; i++ )
 		for( int j = 0; j < I->egroups; j++ )
-			sources[i].sigT[j] = rand() / RAND_MAX;
+			sources[i].sigT[j] = (float) rand() / RAND_MAX;
 
 	return sources;
 }

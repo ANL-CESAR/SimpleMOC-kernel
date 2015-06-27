@@ -79,7 +79,7 @@ typedef struct{
 } SIMD_Vectors;
 
 // kernel.c
-void run_kernel( Input * I, Source * S, Table * table);
+unsigned long long run_kernel( Input * I, Source * S, Table * table);
 void attenuate_segment( Input * restrict I, Source * restrict S,
 		int QSR_id, int FAI_id, float * restrict state_flux,
 		SIMD_Vectors * restrict simd_vecs, Table * restrict table); 
@@ -106,10 +106,13 @@ void print_input_summary(Input * input);
 void read_CLI( int argc, char * argv[], Input * input );
 void print_CLI_error(void);
 void read_input_file( Input * I, char * fname);
+unsigned int hash(unsigned char *str, int nbins);
 
 // papi.c
 void papi_serial_init(void);
 void counter_init( int *eventset, int *num_papi_events, Input * I );
 void counter_stop( int * eventset, int num_papi_events, Input * I );
+
+void print_state_flux( float * flux, int egroups );
 
 #endif

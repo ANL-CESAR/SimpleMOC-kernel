@@ -5,11 +5,12 @@
 COMPILER    = intel
 OPENMP      = yes
 OPTIMIZE    = yes
-DEBUG       = no
+DEBUG       = yes
 PROFILE     = no
 PAPI        = no
 MIC         = no
 TABLE       = no
+VERIFY      = yes
 
 #===============================================================================
 # Program name & source code list
@@ -91,8 +92,8 @@ endif
 # PAPI source (you may need to provide -I and -L pointing
 # to PAPI depending on your installation
 ifeq ($(PAPI),yes)
-  CFLAGS += -DPAPI -I/soft/libraries/papi-5.3.0/include
-  LDFLAGS += -L/soft/libraries/papi-5.3.0/lib -lpapi
+  CFLAGS += -DPAPI #-I/soft/libraries/papi-5.3.0/include
+  LDFLAGS += -lpapi #-L/soft/libraries/papi-5.3.0/lib -lpapi
   OPENMP = yes
 endif
 
@@ -113,6 +114,11 @@ endif
 # Exponential Table Build
 ifeq ($(TABLE), yes)
 	CFLAGS += -DTABLE
+endif
+
+# Verification Hash Checking Mode
+ifeq ($(VERIFY), yes)
+	CFLAGS += -DVERIFY
 endif
 
 #===============================================================================

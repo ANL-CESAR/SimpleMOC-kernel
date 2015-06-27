@@ -3,12 +3,17 @@
 int main( int argc, char * argv[] )
 {
 	int version = 3;
+	unsigned long long vhash;
 
 	#ifdef PAPI
 	papi_serial_init();
 	#endif
 
+	#ifdef VERIFY
+	srand(1);
+	#else
 	srand(time(NULL));
+	#endif
 
 	// Get Inputs
 	Input * I = set_default_input();
@@ -43,7 +48,7 @@ int main( int argc, char * argv[] )
 
 	// Run Simulation Kernel Loop
 	start = get_time();
-	run_kernel(I, S, table);
+	vhash = run_kernel(I, S, table);
 	stop = get_time();
 
 	printf("Simulation Complete.\n");
@@ -56,6 +61,9 @@ int main( int argc, char * argv[] )
 			(double)I->segments / (double) I->egroups) * 1.0e9;
 	printf("%-25s%.3lf seconds\n", "Runtime:", stop-start);
 	printf("%-25s%.3lf ns\n", "Time per Intersection:", tpi);
+	#ifdef VERIFY
+	printf("%-25s%llu\n", "Verification Hash:", vhash);
+	#endif
 	border_print();
 
 	return 0;

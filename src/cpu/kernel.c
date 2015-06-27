@@ -1,9 +1,11 @@
 #include "SimpleMOC-kernel_header.h"
 
-void run_kernel( Input * I, Source * S, Table * table)
+unsigned long long run_kernel( Input * I, Source * S, Table * table)
 {
+	unsigned long long vhash = 0;
+
 	// Enter Parallel Region
-	#pragma omp parallel default(none) shared(I, S, table)
+	#pragma omp parallel default(none) shared(I, S, table, vhash)
 	{
 		#ifdef OPENMP
 		int thread = omp_get_thread_num();
@@ -27,7 +29,13 @@ void run_kernel( Input * I, Source * S, Table * table)
 
 		// Allocate Thread Local Flux Vector
 		for( int i = 0; i < I->egroups; i++ )
+		{
 			state_flux[i] = rand_r(&seed) / RAND_MAX;
+
+			#ifdef VERIFY
+			state_flux[i] = 1.0;
+			#endif
+		}
 
 		// Initialize PAPI Counters (if enabled)
 		#ifdef PAPI
@@ -49,9 +57,31 @@ void run_kernel( Input * I, Source * S, Table * table)
 			// Pick Random Fine Axial Interval
 			int FAI_id = rand_r(&seed) % I->fine_axial_intervals;
 
+			// If verification, set inputs deterministically based
+			// on segment ID
+			#ifdef VERIFY
+			QSR_id = i % I->source_3D_regions;
+			FAI_id = (i+1) % I->fine_axial_intervals;
+			#endif
+
 			// Attenuate Segment
 			attenuate_segment( I, S, QSR_id, FAI_id, state_flux,
 					&simd_vecs, table);
+
+			// If verification, add resulting state flux to hash
+			// Then, reset state_flux to 1
+			#ifdef VERIFY
+			unsigned long long local_hash = 0;
+			for( int j = 0; j < I->egroups; j++ )
+			{
+				char line[256];
+				sprintf(line, "%.5lf", state_flux[j]);
+				local_hash += hash(line, 10000);
+				state_flux[j] = 1.0;
+			}
+			#pragma omp atomic
+			vhash += local_hash;
+			#endif
 		}
 
 		// Stop PAPI Counters
@@ -70,6 +100,8 @@ void run_kernel( Input * I, Source * S, Table * table)
 		counter_stop(&eventset, num_papi_events, I);
 		#endif
 	}
+
+	return vhash;
 }
 
 void attenuate_segment( Input * restrict I, Source * restrict S,
@@ -358,4 +390,13 @@ float interpolateTable( Table * restrict table, float x)
 		float val = slope * x + intercept;
 		return val;
 	}
+}
+
+void print_state_flux( float * flux, int egroups )
+{
+	for( int i = 0; i < egroups; i++ )
+	{
+		printf("%.5e ", flux[i]);
+	}
+	printf("\n");
 }
