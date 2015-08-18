@@ -40,12 +40,12 @@ Source * initialize_sources( Input * I )
 		sources[i].fine_source = &data[i*I->fine_axial_intervals*I->egroups];
 
 	// Allocate Fine Flux Data
-	data = (float *) malloc(
+	double * d_data = (double *) malloc(
 			I->source_3D_regions * I->fine_axial_intervals *
-			I->egroups * sizeof(float));
-	I->nbytes += I->source_3D_regions * I->fine_axial_intervals * I->egroups * sizeof(float);
+			I->egroups * sizeof(double));
+	I->nbytes += I->source_3D_regions * I->fine_axial_intervals * I->egroups * sizeof(double);
 	for( int i = 0; i < I->source_3D_regions; i++ )
-		sources[i].fine_flux = &data[i*I->fine_axial_intervals*I->egroups];
+		sources[i].fine_flux = &d_data[i*I->fine_axial_intervals*I->egroups];
 
 	// Allocate SigT
 	data = (float *) malloc( I->source_3D_regions * I->egroups * sizeof(float));
@@ -66,7 +66,7 @@ Source * initialize_sources( Input * I )
 			for( int k = 0; k < I->egroups; k++ )
 			{
 				sources[i].fine_source[j * I->egroups + k] = (float) rand() / RAND_MAX;
-				sources[i].fine_flux[j * I->egroups + k] = (float) rand() / RAND_MAX;
+				sources[i].fine_flux[j * I->egroups + k] = (double) rand() / RAND_MAX;
 			}
 
 	// Initialize SigT Values

@@ -106,7 +106,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	const int egroups = I->egroups;
 
 	// load fine source region flux vector
-	float * FSR_flux = &S[QSR_id].fine_flux[FAI_id * egroups];
+	double * FSR_flux = &S[QSR_id].fine_flux[FAI_id * egroups];
 
 	if( FAI_id == 0 )
 	{
@@ -273,7 +273,7 @@ void attenuate_segment( Input * restrict I, Source * restrict S,
 	#endif
 	for( int g = 0; g < egroups; g++)
 	{
-		FSR_flux[g] += tally[g];
+		FSR_flux[g] += (double) tally[g];
 	}
 
 	#ifdef OPENMP

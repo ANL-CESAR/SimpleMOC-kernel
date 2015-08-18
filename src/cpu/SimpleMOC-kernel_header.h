@@ -44,7 +44,7 @@ typedef struct{
 
 // Source Region Structure
 typedef struct{
-	float * fine_flux;
+	double * fine_flux;
 	float * fine_source;
 	float * sigT;
 	#ifdef OPENMP
