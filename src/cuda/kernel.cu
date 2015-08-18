@@ -88,7 +88,7 @@ __global__ void run_kernel( Input I, Source *  S,
 		const int egroups = I.egroups;
 
 		// load fine source region flux vector
-		float *  FSR_flux = &SA.fine_flux_arr[ S[QSR_id[i]].fine_flux_id + FAI_id[i] * egroups];
+		double *  FSR_flux = &SA.fine_flux_arr[ S[QSR_id[i]].fine_flux_id + FAI_id[i] * egroups];
 
 		if( FAI_id[i] == 0 )
 		{
@@ -178,7 +178,7 @@ __global__ void run_kernel( Input I, Source *  S,
 
 		// SHOULD BE ATOMIC HERE!
 		//FSR_flux[g] += tally;
-		atomicAdd(&FSR_flux[g], (float) tally);
+		double_atomicAdd(&FSR_flux[g], (double) tally);
 
 		// Term 1
 		t1 = q0 * expVal / sigT;  
@@ -210,4 +210,18 @@ __device__ void interpolateTable(Table *  table, float x, float *  out)
 		float val = slope * x + intercept;
 		*out = val;
 	}
+}
+
+__device__ double double_atomicAdd(double* address, double val)
+{
+	unsigned long long int* address_as_ull =
+		(unsigned long long int*)address;
+	unsigned long long int old = *address_as_ull, assumed;
+	do {
+		assumed = old;
+		old = atomicCAS(address_as_ull, assumed,
+				__double_as_longlong(val +
+					__longlong_as_double(assumed)));
+	} while (assumed != old);
+	return __longlong_as_double(old);
 }

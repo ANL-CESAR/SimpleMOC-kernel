@@ -56,7 +56,7 @@ double mem_estimate( Input I )
 	nbytes += N_fine * sizeof(float);
 
 	// Fine Flux Data
-	nbytes += N_fine * sizeof(float);
+	nbytes += N_fine * sizeof(double);
 
 	// SigT Data
 	long N_sigT = I.source_3D_regions * I.egroups;
@@ -78,7 +78,7 @@ Source * initialize_sources( Input I, Source_Arrays * SA )
 		sources[i].fine_source_id = i*I.fine_axial_intervals*I.egroups;
 
 	// Allocate Fine Flux Data
-	SA->fine_flux_arr = (float *) malloc( N_fine * sizeof(float));
+	SA->fine_flux_arr = (double *) malloc( N_fine * sizeof(double));
 	for( int i = 0; i < I.source_3D_regions; i++ )
 		sources[i].fine_flux_id = i*I.fine_axial_intervals*I.egroups;
 
@@ -92,7 +92,7 @@ Source * initialize_sources( Input I, Source_Arrays * SA )
 	for( long i = 0; i < N_fine; i++ )
 	{
 		SA->fine_source_arr[i] = (float) rand() / RAND_MAX;
-		SA->fine_flux_arr[i] = (float) rand() / RAND_MAX;
+		SA->fine_flux_arr[i] = (double) rand() / RAND_MAX;
 	}
 
 	// Initialize SigT Values
@@ -110,8 +110,8 @@ Source * initialize_device_sources( Input I, Source_Arrays * SA_h, Source_Arrays
 	cudaMemcpy(SA_d->fine_source_arr, SA_h->fine_source_arr, N_fine * sizeof(float), cudaMemcpyHostToDevice);
 
 	// Allocate & Copy Fine Flux Data
-	cudaMalloc((void **) &SA_d->fine_flux_arr, N_fine * sizeof(float));
-	cudaMemcpy(SA_d->fine_flux_arr, SA_h->fine_flux_arr, N_fine * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMalloc((void **) &SA_d->fine_flux_arr, N_fine * sizeof(double));
+	cudaMemcpy(SA_d->fine_flux_arr, SA_h->fine_flux_arr, N_fine * sizeof(double), cudaMemcpyHostToDevice);
 
 	// Allocate & Copy SigT Data
 	long N_sigT = I.source_3D_regions * I.egroups;

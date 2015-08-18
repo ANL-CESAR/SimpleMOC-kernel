@@ -49,7 +49,7 @@ typedef struct{
 
 // Source Arrays
 typedef struct{
-	float * fine_flux_arr;
+	double * fine_flux_arr;
 	float * fine_source_arr;
 	float * sigT_arr;
 } Source_Arrays;
@@ -67,6 +67,7 @@ __global__ void run_kernel( Input I, Source *  S,
 		Source_Arrays SA, Table *  table, curandState *  state,
 		float *  state_fluxes, int N_state_fluxes);
 __device__ void interpolateTable(Table *  table, float x, float *  out);
+__device__ double double_atomicAdd(double* address, double val);
 
 // init.c
 double mem_estimate( Input I );
