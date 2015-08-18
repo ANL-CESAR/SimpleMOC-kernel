@@ -108,7 +108,7 @@ int main( int argc, char * argv[] )
 	double tpi = ((double) (time/1000.0) /
 			(double)I.segments / (double) I.egroups) * 1.0e9;
 	printf("%-25s%.3f seconds\n", "Runtime:", time / 1000.0);
-	printf("%-25s%.3lf ns\n", "Time per Intersection:", tpi);
+	printf("%-25s%.8lf ns\n", "Time per Intersection:", tpi);
 	border_print();
 
 	return 0;
