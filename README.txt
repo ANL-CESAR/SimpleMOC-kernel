@@ -49,6 +49,10 @@ This kernel composes approximately 92% of the walltime of the full application,
 and is therefore useful for analyzing optimization methods and performance
 implications for exascale supercomputer architectures.
 
+More information can be found in the following publication:
+
+http://dx.doi.org/10.1016/j.cpc.2016.01.007
+
 ==============================================================================
 Architectural Support
 ==============================================================================
@@ -198,5 +202,30 @@ For the purposes of simplicity this mini-app uses a conservative "strawman"
 reactor model to represent a good target problem for full core reactor
 simualations to be run on exascale class supercomputers. Arbitrary
 user-defined geometries are not supported.
+
+===============================================================================
+Citing SimpleMOC-kernel
+===============================================================================
+
+Papers citing SimpleMOC-kernel should in general refer to:
+
+Tramm, J. R. et al. (2015) ‘A task-based parallelism and vectorized approach
+to 3D Method of Characteristics (MOC) reactor simulation for high performance
+computing architectures’, Computer Physics Communications, Volume 202, 
+Pages 141–150, (https://doi.org/10.1016/j.cpc.2016.01.007).
+
+The bibtext entry for this paper is given below:
+
+@article{Tramm2016,
+title = "A task-based parallelism and vectorized approach to 3D Method of Characteristics (MOC) reactor simulation for high performance computing architectures",
+journal = "Computer Physics Communications",
+volume = "202",
+pages = "141 - 150",
+year = "2016",
+issn = "0010-4655",
+doi = "https://doi.org/10.1016/j.cpc.2016.01.007",
+url = "http://www.sciencedirect.com/science/article/pii/S0010465516000266",
+author = "John R. Tramm and Geoffrey Gunow and Tim He and Kord S. Smith and Benoit Forget and Andrew R. Siegel",
+}
 
 ===============================================================================
