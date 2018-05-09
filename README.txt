@@ -209,9 +209,10 @@ Citing SimpleMOC-kernel
 
 Papers citing SimpleMOC-kernel should in general refer to:
 
-Tramm, J. R. et al. (2015) ‘A task-based parallelism and vectorized approach
+John R. Tramm, Geoffrey Gunow, Tim He, Kord S. Smith, Benoit Forget, 
+Andrew R. Siegel, (2015) "A task-based parallelism and vectorized approach
 to 3D Method of Characteristics (MOC) reactor simulation for high performance
-computing architectures’, Computer Physics Communications, Volume 202, 
+computing architectures", Computer Physics Communications, Volume 202, 
 Pages 141–150, (https://doi.org/10.1016/j.cpc.2016.01.007).
 
 The bibtext entry for this paper is given below:
